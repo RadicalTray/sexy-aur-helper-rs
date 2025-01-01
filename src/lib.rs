@@ -1,49 +1,11 @@
-use std::{
-    process,
-    fmt,
-};
+mod utils;
+mod search;
+mod sync;
+mod upgrade;
+mod update;
 
-enum Cmd {
-    Search,
-    Sync,
-    Upgrade,
-    Update,
-}
-
-impl fmt::Display for Cmd {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let val = match self {
-            Cmd::Search => "search",
-            Cmd::Sync => "sync",
-            Cmd::Upgrade => "upgrade",
-            Cmd::Update => "update-pkg-list",
-        };
-        write!(f, "{val}")
-    }
-}
-
-fn print_help(to_stderr: bool) {
-    let s = format!("\
-Search the AUR package list:
-\tsaur {} <search string>
-Sync a package or multiple packages:
-\tsaur {} <package name> [package name] ...
-Upgrade system and AUR packages:
-\tsaur {}
-Update the AUR package list:
-\tsaur {}",
-        Cmd::Search,
-        Cmd::Sync,
-        Cmd::Upgrade,
-        Cmd::Update
-    );
-
-    if to_stderr {
-        eprintln!("{}", s);
-    } else {
-        println!("{}", s);
-    }
-}
+use std::process;
+use utils::print_help;
 
 pub fn run(mut args: impl Iterator<Item = String>) {
     args.next();
@@ -56,4 +18,15 @@ pub fn run(mut args: impl Iterator<Item = String>) {
         }
     };
 
+    if let Err(e) = match cmd.as_str() {
+        search::STR => search::run(args),
+        sync::STR => sync::run(args),
+        upgrade::STR => upgrade::run(args),
+        update::STR => update::run(),
+        _ => Err(format!("invalid command {cmd}")),
+    } {
+        eprintln!("Error: {e}");
+        eprintln!();
+        print_help(true);
+    }
 }
