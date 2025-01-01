@@ -1,3 +1,6 @@
+use std::env;
+use sexy_aur_helper_rs::run;
+
 fn main() {
-    println!("Hello, world!");
+    run(env::args());
 }
