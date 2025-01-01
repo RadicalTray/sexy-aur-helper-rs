@@ -5,7 +5,7 @@ mod upgrade;
 mod update;
 
 use std::process;
-use utils::print_help;
+use utils::{print_help, print_error};
 
 pub fn run(mut args: impl Iterator<Item = String>) {
     args.next();
@@ -13,7 +13,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
     let cmd = match args.next() {
         Some(arg) => arg,
         None => {
-            print_help(true);
+            print_error("no command specified");
             process::exit(1);
         }
     };
@@ -23,10 +23,9 @@ pub fn run(mut args: impl Iterator<Item = String>) {
         sync::STR => sync::run(args),
         upgrade::STR => upgrade::run(args),
         update::STR => update::run(),
-        _ => Err(format!("invalid command {cmd}")),
+        _ => Err(format!("invalid command `{cmd}`")),
     } {
-        eprintln!("Error: {e}");
-        eprintln!();
-        print_help(true);
+        print_error(&e);
+        process::exit(1);
     }
 }

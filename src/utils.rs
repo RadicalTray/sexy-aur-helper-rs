@@ -29,3 +29,9 @@ Update the AUR package list:
         print!("{}", s);
     }
 }
+
+pub fn print_error(e: &str) {
+    eprintln!("Error: {e}");
+    eprintln!();
+    print_help(true);
+}
