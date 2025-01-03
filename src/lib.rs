@@ -1,5 +1,4 @@
 mod utils;
-mod urls;
 mod globals;
 mod cmds;
 mod search;
@@ -10,7 +9,9 @@ mod update;
 use std::process;
 use utils::print_error;
 
-pub fn run(mut args: impl Iterator<Item = String>) {
+pub fn run(args: impl Iterator<Item = String>) {
+    let args: Vec<String> = args.collect();
+
     let globals = match globals::Globals::build() {
         Ok(g) => g,
         Err(e) => {
@@ -19,9 +20,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
         }
     };
 
-    args.next();
-
-    let cmd = match args.next() {
+    let cmd = match args.get(1) {
         Some(arg) => arg,
         None => {
             print_error("no command specified");
@@ -30,9 +29,9 @@ pub fn run(mut args: impl Iterator<Item = String>) {
     };
 
     if let Err(e) = match cmd.as_str() {
-        search::STR => search::run(args),
-        sync::STR => sync::run(args),
-        upgrade::STR => upgrade::run(args),
+        search::STR => search::run(globals, args),
+        sync::STR => sync::run(globals, args),
+        upgrade::STR => upgrade::run(globals, args),
         update::STR => update::run(globals),
         _ => Err(format!("invalid command `{cmd}`")),
     } {

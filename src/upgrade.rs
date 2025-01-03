@@ -1,5 +1,7 @@
+use crate::globals::Globals;
+
 pub const STR: &str = "upgrade";
 
-pub fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
+pub fn run(_g: Globals, _args: Vec<String>) -> Result<(), String> {
     Ok(())
 }

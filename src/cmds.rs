@@ -1,5 +1,6 @@
 use std::process::Command;
 use std::path::PathBuf;
+use crate::globals::*;
 
 /// `filename` should be escapeable with ''
 pub fn fetch_aur_data(url: &str, curr_dir: &PathBuf, filename: &str) -> Result<(), String> {
@@ -23,4 +24,12 @@ pub fn fetch_aur_data(url: &str, curr_dir: &PathBuf, filename: &str) -> Result<(
     }
 
     Ok(())
+}
+
+pub fn fetch_pkg(g: &Globals) -> Result<(), String> {
+    fetch_aur_data(URL_PKG, &g.cache_path, FILENAME_PKG)
+}
+
+pub fn fetch_pkgbase(g: &Globals) -> Result<(), String> {
+    fetch_aur_data(URL_PKGBASE, &g.cache_path, FILENAME_PKGBASE)
 }
