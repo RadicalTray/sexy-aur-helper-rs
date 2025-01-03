@@ -9,8 +9,8 @@ mod update;
 use std::process;
 use utils::print_error;
 
-pub fn run(args: impl Iterator<Item = String>) {
-    let args: Vec<String> = args.collect();
+pub fn run(mut args: impl Iterator<Item = String>) {
+    args.next();
 
     let globals = match globals::Globals::build() {
         Ok(g) => g,
@@ -20,7 +20,7 @@ pub fn run(args: impl Iterator<Item = String>) {
         }
     };
 
-    let cmd = match args.get(1) {
+    let cmd = match args.next() {
         Some(arg) => arg,
         None => {
             print_error("no command specified");
@@ -28,11 +28,13 @@ pub fn run(args: impl Iterator<Item = String>) {
         }
     };
 
+    let args: Vec<String> = args.collect();
+
     if let Err(e) = match cmd.as_str() {
         search::STR => search::run(globals, args),
         sync::STR => sync::run(globals, args),
         upgrade::STR => upgrade::run(globals, args),
-        update::STR => update::run(globals),
+        update::STR => update::run(globals, args),
         _ => Err(format!("invalid command `{cmd}`")),
     } {
         print_error(&e);

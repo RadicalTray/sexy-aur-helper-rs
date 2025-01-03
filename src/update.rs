@@ -3,11 +3,8 @@ use crate::globals::*;
 
 pub const STR: &str = "update-pkg-list";
 
-pub fn run(g: Globals) -> Result<(), String>  {
-    let cache_path = &g.cache_path;
-
+pub fn run(g: Globals, _args: Vec<String>) -> Result<(), String>  {
     fetch_pkg(&g)?;
     fetch_pkgbase(&g)?;
-
     Ok(())
 }
