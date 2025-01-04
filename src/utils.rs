@@ -30,7 +30,7 @@ Update the AUR package list:
     }
 }
 
-pub fn print_error(e: &str) {
+pub fn print_error_w_help(e: &str) {
     eprintln!("Error: {e}");
     eprintln!();
     print_help(true);

@@ -1,7 +1,5 @@
-use std::fs;
-use std::path::PathBuf;
-use crate::globals::*;
-use crate::cmds::{fetch_pkg, fetch_pkgbase};
+use crate::globals::Globals;
+use crate::pkg::get_pkgbases;
 
 pub const STR: &str = "search";
 
@@ -12,7 +10,7 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
         return Err(String::from("unexpected arguments"));
     }
 
-    let (_, pkgbases) = get_pkglists(g)?;
+    let pkgbases = get_pkgbases(&g)?;
 
     let result: Vec<&String> = pkgbases
         .iter()
@@ -39,30 +37,4 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn get_pkglists(g: Globals)
--> Result<(Vec<String>, Vec<String>), String> {
-    let pkg_path = g.cache_path.clone().join(FILENAME_PKG);
-    let pkgbase_path = g.cache_path.clone().join(FILENAME_PKGBASE);
-
-    if !pkg_path.exists() {
-        fetch_pkg(&g)?;
-    }
-    if !pkgbase_path.exists() {
-        fetch_pkgbase(&g)?;
-    }
-
-    Ok((
-        get_pkglist(pkg_path),
-        get_pkglist(pkgbase_path)
-    ))
-}
-
-fn get_pkglist(filepath: PathBuf) -> Vec<String> {
-    fs::read_to_string(filepath)
-        .unwrap()
-        .lines()
-        .map(String::from)
-        .collect()
 }

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::env::{self, VarError};
 
+pub const URL_AUR: &str = "https://aur.archlinux.org";
 pub const URL_PKGBASE: &str = "https://aur.archlinux.org/pkgbase.gz";
 pub const URL_PKG: &str = "https://aur.archlinux.org/packages.gz";
 pub const FILENAME_PKG: &str = "packages";

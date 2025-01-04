@@ -1,5 +1,5 @@
 use std::env;
-use sexy_aur_helper_rs::run;
+use saur::run;
 
 fn main() {
     run(env::args());

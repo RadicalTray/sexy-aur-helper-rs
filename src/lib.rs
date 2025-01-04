@@ -1,13 +1,14 @@
 mod utils;
 mod globals;
 mod cmds;
+mod pkg;
 mod search;
 mod sync;
 mod upgrade;
 mod update;
 
 use std::process;
-use utils::print_error;
+use utils::print_error_w_help;
 
 pub fn run(mut args: impl Iterator<Item = String>) {
     args.next();
@@ -15,7 +16,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
     let globals = match globals::Globals::build() {
         Ok(g) => g,
         Err(e) => {
-            print_error(e);
+            print_error_w_help(e);
             process::exit(1);
         }
     };
@@ -23,7 +24,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
     let cmd = match args.next() {
         Some(arg) => arg,
         None => {
-            print_error("no command specified");
+            print_error_w_help("no command specified");
             process::exit(1);
         }
     };
@@ -37,7 +38,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
         update::STR => update::run(globals, args),
         _ => Err(format!("invalid command `{cmd}`")),
     } {
-        print_error(&e);
+        print_error_w_help(&e);
         process::exit(1);
     }
 }
