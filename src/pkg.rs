@@ -21,6 +21,9 @@ pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
 //     Ok(read_file_lines_to_strings(pkg_path))
 // }
 
+pub fn upgrade(g: &Globals) {
+}
+
 pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     let clone_path = g.cache_path.clone().join("clone");
     if !clone_path.exists() {
