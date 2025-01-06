@@ -1,5 +1,5 @@
-use std::path::PathBuf;
 use std::env::{self, VarError};
+use std::path::PathBuf;
 
 pub const URL_AUR: &str = "https://aur.archlinux.org";
 pub const URL_PKGBASE: &str = "https://aur.archlinux.org/pkgbase.gz";
@@ -32,8 +32,6 @@ impl Globals {
 
         let cache_path = PathBuf::from(cache_path).join("saur");
 
-        Ok(Globals {
-            cache_path,
-        })
+        Ok(Globals { cache_path })
     }
 }

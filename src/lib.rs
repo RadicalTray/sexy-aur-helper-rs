@@ -1,18 +1,18 @@
 #![feature(extract_if)]
 
-mod utils;
-mod globals;
-mod cmds;
 mod alpm;
+mod cmds;
+mod globals;
 mod pkg;
 mod search;
 mod sync;
-mod upgrade;
 mod update;
+mod upgrade;
+mod utils;
 
+use ::alpm::Alpm;
 use std::process;
 use utils::print_error_w_help;
-use ::alpm::Alpm;
 
 pub fn run(mut args: impl Iterator<Item = String>) {
     args.next();
@@ -61,4 +61,29 @@ pub fn run_test() {
     for pkg in err_pkgs {
         println!("{:?}", pkg);
     }
+    for pkg in aur_pkgs {
+        println!("{:?}", pkg.provides());
+    }
 }
+
+struct Node {
+    parents: Vec<Box<Node>>,
+    children: Vec<Box<Node>>,
+}
+
+impl Node {
+    fn new() -> Node {
+        Node {
+            parents: Vec::new(),
+            children: Vec::new(),
+        }
+    }
+    fn add_parent(&mut self, parent: Node) {
+        self.parents.push(parent);
+    }
+    fn add_child(&mut self, child: Node) {
+        self.children.push(child);
+    }
+}
+
+fn build_tree() {}

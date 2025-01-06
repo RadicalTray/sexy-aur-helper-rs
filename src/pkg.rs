@@ -1,8 +1,8 @@
-use std::{fs, env};
-use std::path::{PathBuf, Path};
-use std::process::{self, Command};
-use crate::cmds::{fetch_pkgbase, fetch_pkg};
+use crate::cmds::{fetch_pkg, fetch_pkgbase};
 use crate::globals::*;
+use std::path::{Path, PathBuf};
+use std::process::{self, Command};
+use std::{env, fs};
 
 pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
     let pkgbase_path = g.cache_path.clone().join(FILENAME_PKGBASE);
@@ -21,14 +21,12 @@ pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
     Ok(read_file_lines_to_strings(pkg_path))
 }
 
-
 pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
     let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
     (pkgs, err_pkgs)
 }
 
-pub fn upgrade(g: &Globals) {
-}
+pub fn upgrade(g: &Globals) {}
 
 // TODO:
 //  1 manage dependencies
@@ -79,7 +77,10 @@ fn clone(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) 
             Command::new("git").arg("fetch").status().unwrap()
         } else {
             let url = format!("{URL_AUR}/{pkg}.git");
-            Command::new("git").args(["clone", url.as_str()]).status().unwrap()
+            Command::new("git")
+                .args(["clone", url.as_str()])
+                .status()
+                .unwrap()
         };
 
         if status.success() {
@@ -102,24 +103,32 @@ fn makepkg(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>
     for pkg in pkgs {
         env::set_current_dir(clone_path.clone().join(&pkg)).unwrap();
 
-        Command::new("git").args(["reset", "--hard", "origin"]).spawn().unwrap();
+        Command::new("git")
+            .args(["reset", "--hard", "origin"])
+            .spawn()
+            .unwrap();
 
         let status = Command::new("makepkg").status().unwrap();
-        if status.code().unwrap() == 13 { // already built
-            let output = Command::new("makepkg").arg("--packagelist").output().unwrap();
-            built_pkg_paths.extend(
-                read_lines_to_strings(
-                    String::from_utf8(output.stdout).expect("Output not UTF-8")
-                )
-            );
-        } else if status.code().unwrap() == 0 { // newly built
-            let output = Command::new("makepkg").arg("--packagelist").output().unwrap();
-            built_pkg_paths.extend(
-                read_lines_to_strings(
-                    String::from_utf8(output.stdout).expect("Output not UTF-8")
-                )
-            );
-        } else { // failed
+        if status.code().unwrap() == 13 {
+            // already built
+            let output = Command::new("makepkg")
+                .arg("--packagelist")
+                .output()
+                .unwrap();
+            built_pkg_paths.extend(read_lines_to_strings(
+                String::from_utf8(output.stdout).expect("Output not UTF-8"),
+            ));
+        } else if status.code().unwrap() == 0 {
+            // newly built
+            let output = Command::new("makepkg")
+                .arg("--packagelist")
+                .output()
+                .unwrap();
+            built_pkg_paths.extend(read_lines_to_strings(
+                String::from_utf8(output.stdout).expect("Output not UTF-8"),
+            ));
+        } else {
+            // failed
             err_pkgs.push(pkg);
         }
     }

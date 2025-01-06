@@ -12,10 +12,7 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
 
     let pkgbases = get_pkgbases(&g)?;
 
-    let result: Vec<&String> = pkgbases
-        .iter()
-        .filter(|s| s.contains(&args[0]))
-        .collect();
+    let result: Vec<&String> = pkgbases.iter().filter(|s| s.contains(&args[0])).collect();
 
     println!("Found {} AUR matches", result.len());
 

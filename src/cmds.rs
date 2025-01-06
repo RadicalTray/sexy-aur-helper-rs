@@ -1,16 +1,13 @@
-use std::process::Command;
-use std::path::PathBuf;
 use crate::globals::*;
+use std::path::PathBuf;
+use std::process::Command;
 
 /// `filename` should be escapeable with ''
 pub fn fetch_aur_data(url: &str, curr_dir: &PathBuf, filename: &str) -> Result<(), String> {
     let sh_cmd = format!("curl {url} | gzip -cd > '{filename}'");
 
     let status = Command::new("sh")
-        .args([
-            "-c",
-            sh_cmd.as_str(),
-        ])
+        .args(["-c", sh_cmd.as_str()])
         .current_dir(curr_dir)
         .status();
 

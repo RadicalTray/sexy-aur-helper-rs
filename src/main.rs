@@ -1,5 +1,5 @@
-use std::env;
 use saur::run_test;
+use std::env;
 
 fn main() {
     // run(env::args());

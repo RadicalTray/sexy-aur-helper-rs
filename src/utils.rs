@@ -1,10 +1,11 @@
 use crate::search;
 use crate::sync;
-use crate::upgrade;
 use crate::update;
+use crate::upgrade;
 
 pub fn print_help(to_stderr: bool) {
-    let s = format!("\
+    let s = format!(
+        "\
 Search the AUR package list:
 \tsaur {} <search string>
 
