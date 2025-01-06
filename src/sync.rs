@@ -1,5 +1,6 @@
 use crate::globals::Globals;
 use crate::pkg::{get_pkgbases, sync};
+use crate::pkg::is_in_pkgbases;
 
 pub const STR: &str = "sync";
 
@@ -10,12 +11,7 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
 
     let pkgbases = get_pkgbases(&g)?;
 
-    let mut pkgs_not_found = Vec::new();
-    for pkg in &args {
-        if !pkgbases.contains(&pkg) {
-            pkgs_not_found.push(pkg);
-        }
-    }
+    let (pkgs, pkgs_not_found) = is_in_pkgbases(&pkgbases, args);
     if pkgs_not_found.len() > 0 {
         println!("package not found in package base list:");
         for pkg in pkgs_not_found {
@@ -24,7 +20,7 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
         return Ok(());
     }
 
-    sync(&g, args, true);
+    sync(&g, pkgs, true);
 
     Ok(())
 }

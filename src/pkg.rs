@@ -1,7 +1,7 @@
 use std::{fs, env};
 use std::path::{PathBuf, Path};
 use std::process::{self, Command};
-use crate::cmds::fetch_pkgbase;
+use crate::cmds::{fetch_pkgbase, fetch_pkg};
 use crate::globals::*;
 
 pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
@@ -12,18 +12,29 @@ pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
     Ok(read_file_lines_to_strings(pkgbase_path))
 }
 
-// pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
-//     let pkg_path = g.cache_path.clone().join(FILENAME_PKG);
-//     if !pkg_path.exists() {
-//         fetch_pkg(g)?;
-//     }
-//
-//     Ok(read_file_lines_to_strings(pkg_path))
-// }
+pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
+    let pkg_path = g.cache_path.clone().join(FILENAME_PKG);
+    if !pkg_path.exists() {
+        fetch_pkg(g)?;
+    }
+
+    Ok(read_file_lines_to_strings(pkg_path))
+}
+
+
+pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
+    let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
+    (pkgs, err_pkgs)
+}
 
 pub fn upgrade(g: &Globals) {
 }
 
+// TODO:
+//  1 manage dependencies
+//      - create dep tree
+//  2 check if the pkg needs to be built
+//  3 only install pkg that is new (in install())
 pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     let clone_path = g.cache_path.clone().join("clone");
     if !clone_path.exists() {
