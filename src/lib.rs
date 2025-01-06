@@ -11,6 +11,7 @@ mod upgrade;
 mod utils;
 
 use ::alpm::Alpm;
+use ::alpm::Package;
 use std::process;
 use utils::print_error_w_help;
 
@@ -47,6 +48,16 @@ pub fn run(mut args: impl Iterator<Item = String>) {
     }
 }
 
+// manage deps
+//  - get AUR packages that isn't required by anything
+//      - push to stack
+//  - check each depends
+//      - push to stack
+//  - build according to the stack
+//      - check if there are any duplicates (set)
+
+use std::collections::HashSet;
+
 pub fn run_test() {
     let g = match globals::Globals::build() {
         Ok(g) => g,
@@ -58,32 +69,28 @@ pub fn run_test() {
 
     let handle = Alpm::new("/", "/var/lib/pacman").unwrap();
     let (aur_pkgs, err_pkgs) = alpm::get_local_aur_pkgs(&handle, &g);
-    for pkg in err_pkgs {
-        println!("{:?}", pkg);
-    }
-    for pkg in aur_pkgs {
-        println!("{:?}", pkg.provides());
-    }
-}
 
-struct Node {
-    parents: Vec<Box<Node>>,
-    children: Vec<Box<Node>>,
-}
-
-impl Node {
-    fn new() -> Node {
-        Node {
-            parents: Vec::new(),
-            children: Vec::new(),
+    // let mut set = HashSet::new();
+    let mut stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
+    for pkg in &aur_pkgs {
+        if pkg.required_by().len() == 0 {
+            push_to_stack(&aur_pkgs, &mut stack, pkg);
         }
     }
-    fn add_parent(&mut self, parent: Node) {
-        self.parents.push(parent);
-    }
-    fn add_child(&mut self, child: Node) {
-        self.children.push(child);
-    }
+
+    // println!("{:#?}", stack);
 }
 
-fn build_tree() {}
+use alpm_utils::depends::satisfies_nover;
+
+fn push_to_stack<'a>(all_pkgs: &Vec<&'a Package>, stack: &mut Vec<&'a Package>, pkg: &'a Package) {
+    stack.push(pkg);
+    for dep in pkg.depends() {
+        for pkg in all_pkgs {
+            if satisfies_nover(dep, pkg.name(), pkg.provides().into_iter()) {
+                push_to_stack(all_pkgs, stack, pkg);
+                break;
+            }
+        }
+    }
+}
