@@ -52,12 +52,13 @@ pub fn upgrade(g: &Globals) {
         err_pkgs
             .iter()
             .map(|x| String::from(x.name()))
-            .collect::<Vec<String>>()
+            .collect::<Vec<String>>(),
     );
     for pkg in build_stack.iter().rev() {
         if !set.contains(pkg.name()) {
             set.insert(pkg.name());
-            let (cloned_pkgs, mut clone_err_pkgs) = clone(&clone_path, Vec::from([String::from(pkg.name())]));
+            let (cloned_pkgs, mut clone_err_pkgs) =
+                clone(&clone_path, Vec::from([String::from(pkg.name())]));
             if clone_err_pkgs.len() > 0 {
                 err_pkgs.append(&mut clone_err_pkgs);
                 continue;
@@ -210,7 +211,11 @@ fn install(_clone_path: &PathBuf, pkg_paths: Vec<String>) -> i32 {
         .spawn()
         .unwrap();
 
-    proc.stdin.as_ref().unwrap().write("y\n".as_bytes()).unwrap();
+    proc.stdin
+        .as_ref()
+        .unwrap()
+        .write("y\n".as_bytes())
+        .unwrap();
 
     proc.wait().unwrap().code().unwrap()
 }
