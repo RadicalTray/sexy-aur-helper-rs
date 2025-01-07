@@ -1,7 +1,12 @@
+use crate::alpm::get_local_aur_pkgs;
 use crate::cmds::{fetch_pkg, fetch_pkgbase};
 use crate::globals::*;
+use alpm::{Alpm, Package};
+use alpm_utils::depends::satisfies_nover;
+use std::collections::HashSet;
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{self, Command};
+use std::process::{self, Command, Stdio};
 use std::{env, fs};
 
 pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
@@ -26,7 +31,65 @@ pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<Str
     (pkgs, err_pkgs)
 }
 
-pub fn upgrade(g: &Globals) {}
+pub fn upgrade(g: &Globals) {
+    let clone_path = g.cache_path.clone().join("clone");
+    if !clone_path.exists() {
+        fs::create_dir(&clone_path).unwrap();
+    }
+
+    let handle = Alpm::new("/", "/var/lib/pacman").unwrap();
+    let (aur_pkgs, err_pkgs) = get_local_aur_pkgs(&handle, &g);
+
+    let mut set: HashSet<&str> = HashSet::new();
+    let mut build_stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
+    for pkg in &aur_pkgs {
+        if pkg.required_by().len() == 0 {
+            push_to_build_stack(&aur_pkgs, &mut build_stack, pkg);
+        }
+    }
+
+    let mut err_pkgs: Vec<String> = Vec::from(
+        err_pkgs
+            .iter()
+            .map(|x| String::from(x.name()))
+            .collect::<Vec<String>>()
+    );
+    for pkg in build_stack.iter().rev() {
+        if !set.contains(pkg.name()) {
+            set.insert(pkg.name());
+            let (cloned_pkgs, mut clone_err_pkgs) = clone(&clone_path, Vec::from([String::from(pkg.name())]));
+            if clone_err_pkgs.len() > 0 {
+                err_pkgs.append(&mut clone_err_pkgs);
+                continue;
+            }
+
+            let (built_pkg_paths, mut build_err_pkgs) = makepkg(&clone_path, cloned_pkgs);
+            if build_err_pkgs.len() > 0 {
+                err_pkgs.append(&mut build_err_pkgs);
+                continue;
+            }
+
+            install(&clone_path, built_pkg_paths);
+        }
+    }
+}
+
+// algorithm to build deps first
+fn push_to_build_stack<'a>(
+    all_pkgs: &Vec<&'a Package>,
+    stack: &mut Vec<&'a Package>,
+    pkg: &'a Package,
+) {
+    stack.push(pkg);
+    for dep in pkg.depends() {
+        for pkg in all_pkgs {
+            if satisfies_nover(dep, pkg.name(), pkg.provides().into_iter()) {
+                push_to_build_stack(all_pkgs, stack, pkg);
+                break;
+            }
+        }
+    }
+}
 
 // TODO:
 //  1 manage dependencies
@@ -74,6 +137,7 @@ fn clone(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) 
         let pkg_dir = clone_path.clone().join(&pkg);
 
         let status = if pkg_dir.exists() {
+            env::set_current_dir(clone_path.clone().join(&pkg)).unwrap();
             Command::new("git").arg("fetch").status().unwrap()
         } else {
             let url = format!("{URL_AUR}/{pkg}.git");
@@ -137,14 +201,18 @@ fn makepkg(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>
 }
 
 fn install(_clone_path: &PathBuf, pkg_paths: Vec<String>) -> i32 {
-    Command::new("sudo")
+    let mut proc = Command::new("sudo")
         .arg("pacman")
         .arg("-U")
+        .arg("--needed") // BUG: REMOVE THIS
         .args(pkg_paths)
-        .status()
-        .unwrap()
-        .code()
-        .unwrap()
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    proc.stdin.as_ref().unwrap().write("y\n".as_bytes()).unwrap();
+
+    proc.wait().unwrap().code().unwrap()
 }
 
 pub fn read_file_lines_to_strings<P: AsRef<Path>>(filepath: P) -> Vec<String> {
