@@ -37,13 +37,27 @@ pub fn upgrade(g: &Globals) {
         fs::create_dir(&clone_path).unwrap();
     }
 
+    let status = Command::new("sudo")
+        .arg("pacman")
+        .arg("-Syu")
+        .status()
+        .unwrap();
+
+    if !status.success() {
+        process::exit(1);
+    }
+
     let handle = Alpm::new("/", "/var/lib/pacman").unwrap();
     let (aur_pkgs, err_pkgs) = get_local_aur_pkgs(&handle, &g);
 
     let mut set: HashSet<&str> = HashSet::new();
     let mut build_stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
-    for pkg in &aur_pkgs {
+
+    // BUG: will not include a package that depends on each other
+    for pkg in aur_pkgs.iter().rev() {
+        // reverse so the build stack has first packages last
         if pkg.required_by().len() == 0 {
+            // if not a dep then push to build stack
             push_to_build_stack(&aur_pkgs, &mut build_stack, pkg);
         }
     }
@@ -71,7 +85,21 @@ pub fn upgrade(g: &Globals) {
             }
 
             install(&clone_path, built_pkg_paths);
+
+            // TODO: getver
+            //  - run `makepkg --nobuild`
+            //  - run `source PKGBUILD; echo $pkgver`
+
+            // if new_ver(pkg.ver(), new_ver) {
+            //
+            // }
         }
+    }
+
+    if set.len() < aur_pkgs.len() {
+        println!("{:#?}", set);
+        println!("{:#?}", aur_pkgs);
+        process::exit(1);
     }
 }
 
@@ -82,7 +110,9 @@ fn push_to_build_stack<'a>(
     pkg: &'a Package,
 ) {
     stack.push(pkg);
-    for dep in pkg.depends() {
+    let mut deps = pkg.depends().to_list_mut();
+    deps.extend(pkg.makedepends().iter());
+    for dep in deps {
         for pkg in all_pkgs {
             if satisfies_nover(dep, pkg.name(), pkg.provides().into_iter()) {
                 push_to_build_stack(all_pkgs, stack, pkg);
