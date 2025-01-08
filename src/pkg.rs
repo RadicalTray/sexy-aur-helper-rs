@@ -1,3 +1,5 @@
+// TODO: refactor
+
 use crate::alpm::get_local_aur_pkgs;
 use crate::cmds::{fetch_pkg, fetch_pkgbase};
 use crate::globals::*;
@@ -54,10 +56,26 @@ pub fn upgrade(g: &Globals) {
     let mut build_stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
 
     // BUG: will not include a package that depends on each other
+    // in reverse so the build stack has first packages last
     for pkg in aur_pkgs.iter().rev() {
-        // reverse so the build stack has first packages last
-        if pkg.required_by().len() == 0 {
-            // if not a dep then push to build stack
+        let is_aur_pkg_dep = {
+            let mut tmp = false;
+            for pkg_name in pkg.required_by() {
+                if aur_pkgs
+                    .iter()
+                    .map(|x| x.name())
+                    .collect::<Vec<&str>>()
+                    .contains(&pkg_name.as_str())
+                {
+                    tmp = true;
+                    break;
+                }
+            }
+
+            tmp
+        };
+
+        if !is_aur_pkg_dep {
             push_to_build_stack(&aur_pkgs, &mut build_stack, pkg);
         }
     }
@@ -78,6 +96,10 @@ pub fn upgrade(g: &Globals) {
                 continue;
             }
 
+            // TODO: getver
+            //  - run `makepkg --nobuild`
+            //  - run `source PKGBUILD; echo $pkgver`
+
             let (built_pkg_paths, mut build_err_pkgs) = makepkg(&clone_path, cloned_pkgs);
             if build_err_pkgs.len() > 0 {
                 err_pkgs.append(&mut build_err_pkgs);
@@ -86,19 +108,20 @@ pub fn upgrade(g: &Globals) {
 
             install(&clone_path, built_pkg_paths);
 
-            // TODO: getver
-            //  - run `makepkg --nobuild`
-            //  - run `source PKGBUILD; echo $pkgver`
-
             // if new_ver(pkg.ver(), new_ver) {
             //
             // }
         }
     }
 
-    if set.len() < aur_pkgs.len() {
-        println!("{:#?}", set);
-        println!("{:#?}", aur_pkgs);
+    if set.len() != aur_pkgs.len() {
+        println!("pkg not in build stack:");
+        for pkg in aur_pkgs {
+            if !set.contains(pkg.name()) {
+                println!("\t{}", pkg.name());
+            }
+            // set containing pkgs not in aur_pkgs should be impossible
+        }
         process::exit(1);
     }
 }
