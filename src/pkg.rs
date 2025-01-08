@@ -100,6 +100,7 @@ pub fn upgrade(g: &Globals) {
             //  - run `makepkg --nobuild`
             //  - run `source PKGBUILD; echo $pkgver`
 
+            // then build with `--noextract` (because --nobuild already fetched things)
             let (built_pkg_paths, mut build_err_pkgs) = makepkg(&clone_path, cloned_pkgs);
             if build_err_pkgs.len() > 0 {
                 err_pkgs.append(&mut build_err_pkgs);
@@ -146,6 +147,7 @@ fn push_to_build_stack<'a>(
 }
 
 // TODO:
+//  0 notify changes in PKGBUILD
 //  1 manage dependencies
 //      - create dep tree
 //  2 check if the pkg needs to be built

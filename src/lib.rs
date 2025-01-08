@@ -3,6 +3,7 @@
 mod alpm;
 mod cmds;
 mod globals;
+mod makepkg;
 mod pkg;
 mod search;
 mod sync;
