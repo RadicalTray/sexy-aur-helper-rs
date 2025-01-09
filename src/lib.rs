@@ -4,6 +4,7 @@ mod alpm;
 mod cmds;
 mod globals;
 mod makepkg;
+mod pacman;
 mod pkg;
 mod search;
 mod sync;
