@@ -25,6 +25,14 @@ impl Pacman {
         }
     }
 
+    pub fn Syu_status() -> ExitStatus {
+        Command::new("sudo")
+            .arg("pacman")
+            .arg("-Syu")
+            .status()
+            .expect("can't run pacman")
+    }
+
     pub fn S_status<P: AsRef<Path>>(&self, cwd: P, pkg: &str) -> ExitStatus {
         let mut proc = Command::new("sudo")
             .arg("pacman")
