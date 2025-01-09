@@ -1,5 +1,6 @@
 # TODO
 ## Doing
+    - refactor pkg.rs
 
 ## Backlog
     - notify changes in PKGBUILD

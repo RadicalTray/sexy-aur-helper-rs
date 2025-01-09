@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::io::Write;
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -33,14 +32,13 @@ impl Pacman {
             .expect("can't run pacman")
     }
 
-    pub fn S_status<P: AsRef<Path>>(&self, cwd: P, pkg: &str) -> ExitStatus {
+    pub fn S_status(&self, pkg: &str) -> ExitStatus {
         let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-S")
             .args(self.get_args())
             .arg(pkg)
             .stdin(Stdio::piped())
-            .current_dir(cwd)
             .spawn()
             .expect("can't run pacman");
 
@@ -53,14 +51,13 @@ impl Pacman {
         proc.wait().unwrap()
     }
 
-    pub fn S_all_status<P: AsRef<Path>>(&self, cwd: P, pkgs: Vec<String>) -> ExitStatus {
+    pub fn S_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
         let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-S")
             .args(self.get_args())
             .args(pkgs)
             .stdin(Stdio::piped())
-            .current_dir(cwd)
             .spawn()
             .expect("can't run pacman");
 
@@ -73,14 +70,13 @@ impl Pacman {
         proc.wait().unwrap()
     }
 
-    pub fn U_status<P: AsRef<Path>>(&self, cwd: P, pkg: &str) -> ExitStatus {
+    pub fn U_status(&self, pkg: &str) -> ExitStatus {
         let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
             .args(self.get_args())
             .arg(pkg)
             .stdin(Stdio::piped())
-            .current_dir(cwd)
             .spawn()
             .expect("can't run pacman");
 
@@ -93,14 +89,13 @@ impl Pacman {
         proc.wait().unwrap()
     }
 
-    pub fn U_all_status<P: AsRef<Path>>(&self, cwd: P, pkgs: Vec<String>) -> ExitStatus {
+    pub fn U_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
         let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
             .args(self.get_args())
             .args(pkgs)
             .stdin(Stdio::piped())
-            .current_dir(cwd)
             .spawn()
             .expect("can't run pacman");
 

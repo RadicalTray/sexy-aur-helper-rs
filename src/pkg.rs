@@ -3,35 +3,15 @@
 use crate::alpm::get_local_aur_pkgs;
 use crate::cmds::{fetch_pkg, fetch_pkgbase};
 use crate::globals::*;
+use crate::makepkg::Makepkg;
+use crate::pacman::Pacman;
+use crate::git::Git;
 use alpm::{Alpm, Package};
 use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{self, Command, Stdio};
+use std::process;
 use std::{env, fs};
-
-pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
-    let pkgbase_path = g.cache_path.clone().join(FILENAME_PKGBASE);
-    if !pkgbase_path.exists() {
-        fetch_pkgbase(g)?;
-    }
-    Ok(read_file_lines_to_strings(pkgbase_path))
-}
-
-pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
-    let pkg_path = g.cache_path.clone().join(FILENAME_PKG);
-    if !pkg_path.exists() {
-        fetch_pkg(g)?;
-    }
-
-    Ok(read_file_lines_to_strings(pkg_path))
-}
-
-pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
-    let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
-    (pkgs, err_pkgs)
-}
 
 pub fn upgrade(g: &Globals) {
     let clone_path = g.cache_path.clone().join("clone");
@@ -39,11 +19,7 @@ pub fn upgrade(g: &Globals) {
         fs::create_dir(&clone_path).unwrap();
     }
 
-    let status = Command::new("sudo")
-        .arg("pacman")
-        .arg("-Syu")
-        .status()
-        .unwrap();
+    let status = Pacman::Syu_status();
 
     if !status.success() {
         process::exit(1);
@@ -193,14 +169,11 @@ fn clone(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) 
         let pkg_dir = clone_path.clone().join(&pkg);
 
         let status = if pkg_dir.exists() {
-            env::set_current_dir(clone_path.clone().join(&pkg)).unwrap();
-            Command::new("git").arg("fetch").status().unwrap()
+            env::set_current_dir(pkg_dir).unwrap();
+            Git::fetch()
         } else {
             let url = format!("{URL_AUR}/{pkg}.git");
-            Command::new("git")
-                .args(["clone", url.as_str()])
-                .status()
-                .unwrap()
+            Git::clone(url.as_str())
         };
 
         if status.success() {
@@ -221,35 +194,27 @@ fn makepkg(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>
     let mut err_pkgs = Vec::new();
 
     for pkg in pkgs {
-        env::set_current_dir(clone_path.clone().join(&pkg)).unwrap();
+        let cwd = clone_path.clone().join(&pkg);
+        env::set_current_dir(cwd).unwrap();
 
-        Command::new("git")
-            .args(["reset", "--hard", "origin"])
-            .spawn()
-            .unwrap();
+        Git::reset_hard_origin();
 
-        let status = Command::new("makepkg").status().unwrap();
-        if status.code().unwrap() == 13 {
-            // already built
-            let output = Command::new("makepkg")
-                .arg("--packagelist")
-                .output()
-                .unwrap();
-            built_pkg_paths.extend(read_lines_to_strings(
-                String::from_utf8(output.stdout).expect("Output not UTF-8"),
-            ));
-        } else if status.code().unwrap() == 0 {
-            // newly built
-            let output = Command::new("makepkg")
-                .arg("--packagelist")
-                .output()
-                .unwrap();
-            built_pkg_paths.extend(read_lines_to_strings(
-                String::from_utf8(output.stdout).expect("Output not UTF-8"),
-            ));
-        } else {
-            // failed
-            err_pkgs.push(pkg);
+        let status = Makepkg::new().status();
+        match status.code().unwrap() {
+            13 | 0 => {
+                let output = Makepkg {
+                    packagelist: true,
+                    ..Default::default()
+                }
+                .output();
+
+                built_pkg_paths.extend(read_lines_to_strings(
+                    String::from_utf8(output.stdout).expect("Output not UTF-8"),
+                ));
+            }
+            _ => {
+                err_pkgs.push(pkg);
+            }
         }
     }
 
@@ -257,28 +222,36 @@ fn makepkg(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>
 }
 
 fn install(_clone_path: &PathBuf, pkg_paths: Vec<String>) -> i32 {
-    let mut proc = Command::new("sudo")
-        .arg("pacman")
-        .arg("-U")
-        .arg("--needed") // BUG: REMOVE THIS
-        .args(pkg_paths)
-        .stdin(Stdio::piped())
-        .spawn()
-        .unwrap();
-
-    proc.stdin
-        .as_ref()
-        .unwrap()
-        .write("y\n".as_bytes())
-        .unwrap();
-
-    proc.wait().unwrap().code().unwrap()
+    Pacman::new().U_all_status(pkg_paths).code().unwrap()
 }
 
-pub fn read_file_lines_to_strings<P: AsRef<Path>>(filepath: P) -> Vec<String> {
+pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
+    let pkgbase_path = g.cache_path.clone().join(FILENAME_PKGBASE);
+    if !pkgbase_path.exists() {
+        fetch_pkgbase(g)?;
+    }
+    Ok(read_file_lines_to_strings(pkgbase_path))
+}
+
+pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
+    let pkg_path = g.cache_path.clone().join(FILENAME_PKG);
+    if !pkg_path.exists() {
+        fetch_pkg(g)?;
+    }
+
+    Ok(read_file_lines_to_strings(pkg_path))
+}
+
+pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
+    let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
+    (pkgs, err_pkgs)
+}
+
+fn read_file_lines_to_strings<P: AsRef<Path>>(filepath: P) -> Vec<String> {
     read_lines_to_strings(fs::read_to_string(filepath).unwrap())
 }
 
 fn read_lines_to_strings(s: String) -> Vec<String> {
     s.lines().map(String::from).collect()
 }
+

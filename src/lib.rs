@@ -5,6 +5,7 @@ mod cmds;
 mod globals;
 mod makepkg;
 mod pacman;
+mod git;
 mod pkg;
 mod search;
 mod sync;

@@ -1,13 +1,12 @@
-use std::path::Path;
 use std::process::{Command, ExitStatus, Output};
 
 pub struct Makepkg {
-    nobuild: bool,
-    noextract: bool,
-    force: bool,
-    packagelist: bool,
-    cleanbuild: bool,
-    clean: bool,
+    pub nobuild: bool,
+    pub noextract: bool,
+    pub force: bool,
+    pub packagelist: bool,
+    pub cleanbuild: bool,
+    pub clean: bool,
 }
 
 impl Default for Makepkg {
@@ -30,18 +29,16 @@ impl Makepkg {
         }
     }
 
-    pub fn status<P: AsRef<Path>>(&self, cwd: P) -> ExitStatus {
+    pub fn status(&self) -> ExitStatus {
         Command::new("makepkg")
             .args(self.get_args())
-            .current_dir(cwd)
             .status()
             .expect("can't run makepkg")
     }
 
-    pub fn output<P: AsRef<Path>>(&self, cwd: P) -> Output {
+    pub fn output(&self) -> Output {
         Command::new("makepkg")
             .args(self.get_args())
-            .current_dir(cwd)
             .output()
             .expect("can't run makepkg")
     }
