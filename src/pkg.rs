@@ -11,6 +11,7 @@ use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process;
+use std::io::{self, Write};
 use std::{env, fs};
 
 fn prepare(g: &Globals) {
@@ -31,10 +32,26 @@ pub fn upgrade(g: &Globals) {
 
     let handle = Alpm::new("/", "/var/lib/pacman").unwrap();
     let (aur_pkgs, err_pkgs) = get_local_aur_pkgs(&handle, &g);
+    for pkg in err_pkgs {
+        println!("{} not found in aur!", pkg.name());
+    }
+    println!();
 
-    // TODO: print err_pkgs (foreign pkg not found in aur)
-    //  and show pkgs to be built
+    println!("{} packages to be built:", aur_pkgs.len());
+    for pkg in &aur_pkgs {
+        println!("\t{}", pkg.name());
+    }
 
+    print!("Accept [Y/n] ");
+    io::stdout().flush().unwrap();
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer).expect("read_line");
+    let buffer = buffer.trim();
+    if buffer != "" && buffer != "y" {
+        process::exit(1);
+    }
+
+    // below could be run in another thread then wait for it while user is reading
     let mut set: HashSet<&str> = HashSet::new();
     let mut build_stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
 
@@ -63,12 +80,7 @@ pub fn upgrade(g: &Globals) {
         }
     }
 
-    let mut err_pkgs: Vec<String> = Vec::from(
-        err_pkgs
-            .iter()
-            .map(|x| String::from(x.name()))
-            .collect::<Vec<String>>(),
-    );
+    let mut err_pkgs: Vec<String> = Vec::new();
     for pkg in build_stack.iter().rev() {
         if set.contains(pkg.name()) {
             continue;
