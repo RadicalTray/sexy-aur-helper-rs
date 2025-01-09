@@ -2,10 +2,10 @@
 
 mod alpm;
 mod cmds;
+mod git;
 mod globals;
 mod makepkg;
 mod pacman;
-mod git;
 mod pkg;
 mod search;
 mod sync;

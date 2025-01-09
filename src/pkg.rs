@@ -2,10 +2,10 @@
 
 use crate::alpm::get_local_aur_pkgs;
 use crate::cmds::{fetch_pkg, fetch_pkgbase};
+use crate::git::Git;
 use crate::globals::*;
 use crate::makepkg::Makepkg;
 use crate::pacman::Pacman;
-use crate::git::Git;
 use alpm::{Alpm, Package};
 use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
@@ -254,4 +254,3 @@ fn read_file_lines_to_strings<P: AsRef<Path>>(filepath: P) -> Vec<String> {
 fn read_lines_to_strings(s: String) -> Vec<String> {
     s.lines().map(String::from).collect()
 }
-
