@@ -4,7 +4,6 @@ use std::process::{Command, ExitStatus, Output};
 pub struct Makepkg {
     nobuild: bool,
     noextract: bool,
-    needed: bool,
     force: bool,
     packagelist: bool,
     cleanbuild: bool,
@@ -16,7 +15,6 @@ impl Default for Makepkg {
         Makepkg {
             nobuild: false,
             noextract: false,
-            needed: false,
             force: false,
             packagelist: false,
             cleanbuild: false,
@@ -54,9 +52,6 @@ impl Makepkg {
     fn get_args(&self) -> Vec<String> {
         let mut args = Vec::new();
         let flags = self;
-        if flags.needed {
-            args.push("--needed");
-        }
         if flags.force {
             args.push("--force");
         }

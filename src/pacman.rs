@@ -1,5 +1,6 @@
 use std::path::Path;
-use std::process::{Command, ExitStatus};
+use std::io::Write;
+use std::process::{Command, ExitStatus, Stdio};
 
 pub struct Pacman {
     asexplicit: bool,
@@ -25,47 +26,83 @@ impl Pacman {
     }
 
     pub fn S_status<P: AsRef<Path>>(&self, cwd: P, pkg: &str) -> ExitStatus {
-        Command::new("sudo")
+        let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-S")
             .args(self.get_args())
             .arg(pkg)
+            .stdin(Stdio::piped())
             .current_dir(cwd)
-            .status()
-            .expect("can't run pacman")
+            .spawn()
+            .expect("can't run pacman");
+
+        proc.stdin
+            .as_ref()
+            .unwrap()
+            .write("y\n".as_bytes())
+            .unwrap();
+
+        proc.wait().unwrap()
     }
 
     pub fn S_all_status<P: AsRef<Path>>(&self, cwd: P, pkgs: Vec<String>) -> ExitStatus {
-        Command::new("sudo")
+        let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-S")
             .args(self.get_args())
             .args(pkgs)
+            .stdin(Stdio::piped())
             .current_dir(cwd)
-            .status()
-            .expect("can't run pacman")
+            .spawn()
+            .expect("can't run pacman");
+
+        proc.stdin
+            .as_ref()
+            .unwrap()
+            .write("y\n".as_bytes())
+            .unwrap();
+
+        proc.wait().unwrap()
     }
 
     pub fn U_status<P: AsRef<Path>>(&self, cwd: P, pkg: &str) -> ExitStatus {
-        Command::new("sudo")
+        let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
             .args(self.get_args())
             .arg(pkg)
+            .stdin(Stdio::piped())
             .current_dir(cwd)
-            .status()
-            .expect("can't run pacman")
+            .spawn()
+            .expect("can't run pacman");
+
+        proc.stdin
+            .as_ref()
+            .unwrap()
+            .write("y\n".as_bytes())
+            .unwrap();
+
+        proc.wait().unwrap()
     }
 
     pub fn U_all_status<P: AsRef<Path>>(&self, cwd: P, pkgs: Vec<String>) -> ExitStatus {
-        Command::new("sudo")
+        let mut proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
             .args(self.get_args())
             .args(pkgs)
+            .stdin(Stdio::piped())
             .current_dir(cwd)
-            .status()
-            .expect("can't run pacman")
+            .spawn()
+            .expect("can't run pacman");
+
+        proc.stdin
+            .as_ref()
+            .unwrap()
+            .write("y\n".as_bytes())
+            .unwrap();
+
+        proc.wait().unwrap()
     }
 
     // NOTE: Is there a way to write this better in rust?
