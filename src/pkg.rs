@@ -9,9 +9,9 @@ use crate::pacman::Pacman;
 use alpm::{Alpm, Package};
 use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
-use std::io::{self, Write};
 use std::{env, fs};
 
 fn prepare(g: &Globals) {
@@ -37,6 +37,12 @@ pub fn upgrade(g: &Globals) {
     }
     println!();
 
+    let clone_path = g.cache_path.clone().join("clone");
+    fetch_pkgs(
+        &clone_path,
+        aur_pkgs.iter().map(|x| x.name().to_string()).collect(),
+    );
+
     println!("{} packages to be built:", aur_pkgs.len());
     for pkg in &aur_pkgs {
         println!("\t{}", pkg.name());
@@ -52,7 +58,51 @@ pub fn upgrade(g: &Globals) {
     }
 
     // below could be run in another thread then wait for it while user is reading
+    let build_stack = setup_build_stack(&aur_pkgs);
     let mut set: HashSet<&str> = HashSet::new();
+
+    let mut err_pkgs: Vec<String> = Vec::new();
+    for pkg in build_stack.iter().rev() {
+        if set.contains(pkg.name()) {
+            continue;
+        }
+        set.insert(pkg.name());
+
+        // TODO: getver
+        //  - run `makepkg --nobuild`
+        //  - run `source PKGBUILD; echo $pkgver`
+        // then build with `--noextract` (because --nobuild already fetched things)
+
+        // if new_ver(pkg.ver(), new_ver) {
+        //
+        // }
+
+        let cwd = clone_path.clone().join(pkg.name());
+        env::set_current_dir(cwd).unwrap();
+        let built_pkg_paths = match makepkg(pkg.name()) {
+            Ok(v) => v,
+            Err(pkg) => {
+                err_pkgs.push(pkg);
+                continue;
+            }
+        };
+
+        install(built_pkg_paths);
+    }
+
+    if set.len() != aur_pkgs.len() {
+        println!("pkg not in build stack:");
+        for pkg in aur_pkgs {
+            if !set.contains(pkg.name()) {
+                println!("\t{}", pkg.name());
+            }
+            // set containing pkgs not in aur_pkgs should be impossible
+        }
+        process::exit(1);
+    }
+}
+
+fn setup_build_stack<'a>(aur_pkgs: &Vec<&'a Package>) -> Vec<&'a Package> {
     let mut build_stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
 
     // BUG: will not include a package that depends on each other
@@ -80,50 +130,7 @@ pub fn upgrade(g: &Globals) {
         }
     }
 
-    let mut err_pkgs: Vec<String> = Vec::new();
-    for pkg in build_stack.iter().rev() {
-        if set.contains(pkg.name()) {
-            continue;
-        }
-
-        let clone_path = g.cache_path.clone().join("clone");
-
-        set.insert(pkg.name());
-        let (cloned_pkgs, mut clone_err_pkgs) =
-            clone(&clone_path, Vec::from([String::from(pkg.name())]));
-        if clone_err_pkgs.len() > 0 {
-            err_pkgs.append(&mut clone_err_pkgs);
-            continue;
-        }
-
-        // TODO: getver
-        //  - run `makepkg --nobuild`
-        //  - run `source PKGBUILD; echo $pkgver`
-
-        // then build with `--noextract` (because --nobuild already fetched things)
-        let (built_pkg_paths, mut build_err_pkgs) = makepkg(&clone_path, cloned_pkgs);
-        if build_err_pkgs.len() > 0 {
-            err_pkgs.append(&mut build_err_pkgs);
-            continue;
-        }
-
-        install(built_pkg_paths);
-
-        // if new_ver(pkg.ver(), new_ver) {
-        //
-        // }
-    }
-
-    if set.len() != aur_pkgs.len() {
-        println!("pkg not in build stack:");
-        for pkg in aur_pkgs {
-            if !set.contains(pkg.name()) {
-                println!("\t{}", pkg.name());
-            }
-            // set containing pkgs not in aur_pkgs should be impossible
-        }
-        process::exit(1);
-    }
+    build_stack
 }
 
 // algorithm to build deps first
@@ -135,6 +142,7 @@ fn push_to_build_stack<'a>(
     stack.push(pkg);
     let mut deps = pkg.depends().to_list_mut();
     deps.extend(pkg.makedepends().iter());
+    deps.extend(pkg.checkdepends().iter()); // NOTE: likely not needed
     for dep in deps {
         for pkg in all_pkgs {
             if satisfies_nover(dep, pkg.name(), pkg.provides().into_iter()) {
@@ -155,7 +163,7 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     prepare(g);
 
     let clone_path = g.cache_path.clone().join("clone");
-    let (cloned_pkgs, err_pkgs) = clone(&clone_path, pkgs);
+    let (cloned_pkgs, err_pkgs) = fetch_pkgs(&clone_path, pkgs);
     if quit_on_err && err_pkgs.len() > 0 {
         eprintln!("Error happened while cloning:");
         for pkg in err_pkgs {
@@ -164,7 +172,7 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
         return;
     }
 
-    let (built_pkg_paths, err_pkgs) = makepkg(&clone_path, cloned_pkgs);
+    let (built_pkg_paths, err_pkgs) = makepkg_all(&clone_path, cloned_pkgs);
     if quit_on_err && err_pkgs.len() > 0 {
         eprintln!("Error happened while building:");
         for pkg in err_pkgs {
@@ -180,37 +188,50 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     process::exit(status_code);
 }
 
-fn clone(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
+// TODO: resolve the deps in here
+fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
     env::set_current_dir(clone_path).unwrap();
 
-    let mut cloned_pkgs = Vec::with_capacity(pkgs.len());
+    let mut old_pkgs = Vec::with_capacity(pkgs.len());
+    let mut new_pkgs = Vec::with_capacity(pkgs.len());
     let mut err_pkgs = Vec::new();
 
     for pkg in pkgs {
         let pkg_dir = clone_path.clone().join(&pkg);
+        if pkg_dir.exists() {
+            let git = Git::cwd(pkg_dir);
 
-        let status = if pkg_dir.exists() {
-            env::set_current_dir(pkg_dir).unwrap();
-            Git::fetch()
+            git.reset_hard_origin();
+            let status = git.fetch();
+
+            if !status.success() {
+                err_pkgs.push(pkg);
+            } else {
+                let diff_output = String::from_utf8(git.diff_fetch().stdout).expect("UTF-8");
+                if !diff_output.trim().is_empty() {
+                    new_pkgs.push(pkg);
+                } else {
+                    old_pkgs.push(pkg);
+                }
+            }
         } else {
-            let url = format!("{URL_AUR}/{pkg}.git");
-            Git::clone(url.as_str())
+            let status = Git::cwd(clone_path.to_path_buf())
+                .clone(format!("{URL_AUR}/{pkg}.git").as_str());
+
+            if !status.success() {
+                err_pkgs.push(pkg);
+            } else {
+                new_pkgs.push(pkg);
+            }
         };
-
-        if status.success() {
-            cloned_pkgs.push(pkg);
-        } else {
-            err_pkgs.push(pkg);
-        }
     }
 
-    (cloned_pkgs, err_pkgs)
+    let mut fetched_pkgs = Vec::from(old_pkgs);
+    fetched_pkgs.extend(new_pkgs);
+    (fetched_pkgs, err_pkgs)
 }
 
-// fn fetch(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
-// }
-
-fn makepkg(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
+fn makepkg_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
     let mut built_pkg_paths = Vec::with_capacity(pkgs.len());
     let mut err_pkgs = Vec::new();
 
@@ -218,28 +239,34 @@ fn makepkg(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>
         let cwd = clone_path.clone().join(&pkg);
         env::set_current_dir(cwd).unwrap();
 
-        Git::reset_hard_origin();
-
-        let status = Makepkg::new().status();
-        match status.code().unwrap() {
-            13 | 0 => {
-                let output = Makepkg {
-                    packagelist: true,
-                    ..Default::default()
-                }
-                .output();
-
-                built_pkg_paths.extend(read_lines_to_strings(
-                    String::from_utf8(output.stdout).expect("Output not UTF-8"),
-                ));
-            }
-            _ => {
+        match makepkg(&pkg) {
+            Ok(v) => built_pkg_paths.extend(v),
+            Err(pkg) => {
                 err_pkgs.push(pkg);
+                continue;
             }
-        }
+        };
     }
 
     (built_pkg_paths, err_pkgs)
+}
+
+fn makepkg(pkg: &str) -> Result<Vec<String>, String> {
+    let status = Makepkg::new().status();
+    match status.code().unwrap() {
+        13 | 0 => {
+            let output = Makepkg {
+                packagelist: true,
+                ..Default::default()
+            }
+            .output();
+
+            Ok(read_lines_to_strings(
+                String::from_utf8(output.stdout).expect("Output not UTF-8"),
+            ))
+        }
+        _ => Err(pkg.to_string()),
+    }
 }
 
 fn install(pkg_paths: Vec<String>) -> i32 {

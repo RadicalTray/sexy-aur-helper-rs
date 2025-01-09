@@ -105,11 +105,11 @@ impl Pacman {
 }
 
 fn enter_and_wait(mut proc: Child) -> ExitStatus {
-        proc.stdin
-            .as_ref()
-            .unwrap()
-            .write("y\n".as_bytes())
-            .unwrap();
+    proc.stdin
+        .as_ref()
+        .unwrap()
+        .write("y\n".as_bytes())
+        .unwrap();
 
-        proc.wait().unwrap()
+    proc.wait().unwrap()
 }
