@@ -1,5 +1,5 @@
 use std::io::Write;
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 
 pub struct Pacman {
     asexplicit: bool,
@@ -33,7 +33,7 @@ impl Pacman {
     }
 
     pub fn S_status(&self, pkg: &str) -> ExitStatus {
-        let mut proc = Command::new("sudo")
+        let proc = Command::new("sudo")
             .arg("pacman")
             .arg("-S")
             .args(self.get_args())
@@ -42,17 +42,11 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        proc.stdin
-            .as_ref()
-            .unwrap()
-            .write("y\n".as_bytes())
-            .unwrap();
-
-        proc.wait().unwrap()
+        enter_and_wait(proc)
     }
 
     pub fn S_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
-        let mut proc = Command::new("sudo")
+        let proc = Command::new("sudo")
             .arg("pacman")
             .arg("-S")
             .args(self.get_args())
@@ -61,17 +55,11 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        proc.stdin
-            .as_ref()
-            .unwrap()
-            .write("y\n".as_bytes())
-            .unwrap();
-
-        proc.wait().unwrap()
+        enter_and_wait(proc)
     }
 
     pub fn U_status(&self, pkg: &str) -> ExitStatus {
-        let mut proc = Command::new("sudo")
+        let proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
             .args(self.get_args())
@@ -80,17 +68,11 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        proc.stdin
-            .as_ref()
-            .unwrap()
-            .write("y\n".as_bytes())
-            .unwrap();
-
-        proc.wait().unwrap()
+        enter_and_wait(proc)
     }
 
     pub fn U_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
-        let mut proc = Command::new("sudo")
+        let proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
             .args(self.get_args())
@@ -99,13 +81,7 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        proc.stdin
-            .as_ref()
-            .unwrap()
-            .write("y\n".as_bytes())
-            .unwrap();
-
-        proc.wait().unwrap()
+        enter_and_wait(proc)
     }
 
     // NOTE: Is there a way to write this better in rust?
@@ -126,4 +102,14 @@ impl Pacman {
 
         args.iter().map(|x| x.to_string()).collect()
     }
+}
+
+fn enter_and_wait(mut proc: Child) -> ExitStatus {
+        proc.stdin
+            .as_ref()
+            .unwrap()
+            .write("y\n".as_bytes())
+            .unwrap();
+
+        proc.wait().unwrap()
 }

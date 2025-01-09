@@ -6,7 +6,6 @@ pub fn get_local_aur_pkgs<'a>(
     handle: &'a Alpm,
     g: &Globals,
 ) -> (Vec<&'a Package>, Vec<&'a Package>) {
-    println!("\x1b[0;31mTHIS IS A TEST!\x1b[0m");
     let localdb = handle.localdb();
     let pkgbases = get_pkgbases(g).unwrap();
     let all_pkgs = get_pkgs(g).unwrap();

@@ -13,20 +13,27 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::{env, fs};
 
-pub fn upgrade(g: &Globals) {
+fn prepare(g: &Globals) {
     let clone_path = g.cache_path.clone().join("clone");
     if !clone_path.exists() {
         fs::create_dir(&clone_path).unwrap();
     }
+    env::set_current_dir(clone_path).unwrap();
+}
+
+pub fn upgrade(g: &Globals) {
+    prepare(g);
 
     let status = Pacman::Syu_status();
-
     if !status.success() {
         process::exit(1);
     }
 
     let handle = Alpm::new("/", "/var/lib/pacman").unwrap();
     let (aur_pkgs, err_pkgs) = get_local_aur_pkgs(&handle, &g);
+
+    // TODO: print err_pkgs (foreign pkg not found in aur)
+    //  and show pkgs to be built
 
     let mut set: HashSet<&str> = HashSet::new();
     let mut build_stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
@@ -63,32 +70,36 @@ pub fn upgrade(g: &Globals) {
             .collect::<Vec<String>>(),
     );
     for pkg in build_stack.iter().rev() {
-        if !set.contains(pkg.name()) {
-            set.insert(pkg.name());
-            let (cloned_pkgs, mut clone_err_pkgs) =
-                clone(&clone_path, Vec::from([String::from(pkg.name())]));
-            if clone_err_pkgs.len() > 0 {
-                err_pkgs.append(&mut clone_err_pkgs);
-                continue;
-            }
-
-            // TODO: getver
-            //  - run `makepkg --nobuild`
-            //  - run `source PKGBUILD; echo $pkgver`
-
-            // then build with `--noextract` (because --nobuild already fetched things)
-            let (built_pkg_paths, mut build_err_pkgs) = makepkg(&clone_path, cloned_pkgs);
-            if build_err_pkgs.len() > 0 {
-                err_pkgs.append(&mut build_err_pkgs);
-                continue;
-            }
-
-            install(&clone_path, built_pkg_paths);
-
-            // if new_ver(pkg.ver(), new_ver) {
-            //
-            // }
+        if set.contains(pkg.name()) {
+            continue;
         }
+
+        let clone_path = g.cache_path.clone().join("clone");
+
+        set.insert(pkg.name());
+        let (cloned_pkgs, mut clone_err_pkgs) =
+            clone(&clone_path, Vec::from([String::from(pkg.name())]));
+        if clone_err_pkgs.len() > 0 {
+            err_pkgs.append(&mut clone_err_pkgs);
+            continue;
+        }
+
+        // TODO: getver
+        //  - run `makepkg --nobuild`
+        //  - run `source PKGBUILD; echo $pkgver`
+
+        // then build with `--noextract` (because --nobuild already fetched things)
+        let (built_pkg_paths, mut build_err_pkgs) = makepkg(&clone_path, cloned_pkgs);
+        if build_err_pkgs.len() > 0 {
+            err_pkgs.append(&mut build_err_pkgs);
+            continue;
+        }
+
+        install(built_pkg_paths);
+
+        // if new_ver(pkg.ver(), new_ver) {
+        //
+        // }
     }
 
     if set.len() != aur_pkgs.len() {
@@ -129,11 +140,9 @@ fn push_to_build_stack<'a>(
 //  2 check if the pkg needs to be built
 //  3 only install pkg that is new (in install())
 pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
-    let clone_path = g.cache_path.clone().join("clone");
-    if !clone_path.exists() {
-        fs::create_dir(&clone_path).unwrap();
-    }
+    prepare(g);
 
+    let clone_path = g.cache_path.clone().join("clone");
     let (cloned_pkgs, err_pkgs) = clone(&clone_path, pkgs);
     if quit_on_err && err_pkgs.len() > 0 {
         eprintln!("Error happened while cloning:");
@@ -152,9 +161,9 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
         return;
     }
 
-    let status_code = install(&clone_path, built_pkg_paths);
-
     // TODO: print stats
+
+    let status_code = install(built_pkg_paths);
 
     process::exit(status_code);
 }
@@ -221,7 +230,7 @@ fn makepkg(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>
     (built_pkg_paths, err_pkgs)
 }
 
-fn install(_clone_path: &PathBuf, pkg_paths: Vec<String>) -> i32 {
+fn install(pkg_paths: Vec<String>) -> i32 {
     Pacman::new().U_all_status(pkg_paths).code().unwrap()
 }
 
