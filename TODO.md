@@ -1,9 +1,8 @@
 # TODO
 ## Doing
-    - multithreading fetch_pkgs
+    - check if needed to be built
 
 ## Backlog
-    - check if needed to be built
     - automatically fetch deps
     - add support for flags
     - print stat

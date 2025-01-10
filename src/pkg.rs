@@ -84,6 +84,13 @@ pub fn upgrade(g: &Globals) {
         install(built_pkg_paths);
     }
 
+    if err_pkgs.len() > 0 {
+        eprintln!("Error happened while building:");
+        for pkg in err_pkgs {
+            eprintln!("\t{pkg}");
+        }
+    }
+
     if set.len() != aur_pkgs.len() {
         println!("pkg not in build stack:");
         for pkg in aur_pkgs {
@@ -193,6 +200,12 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     // TODO: print stats
 
     let status_code = install(built_pkg_paths);
+    if err_pkgs.len() > 0 {
+        eprintln!("Error happened while building:");
+        for pkg in err_pkgs {
+            eprintln!("\t{pkg}");
+        }
+    }
 
     process::exit(status_code);
 }
