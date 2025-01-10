@@ -2,14 +2,16 @@ use std::io::Write;
 use std::process::{Child, Command, ExitStatus, Stdio};
 
 pub struct Pacman {
-    asexplicit: bool,
-    asdeps: bool,
-    needed: bool,
+    pub yes: bool,
+    pub asexplicit: bool,
+    pub asdeps: bool,
+    pub needed: bool,
 }
 
 impl Default for Pacman {
     fn default() -> Pacman {
         Pacman {
+            yes: false,
             asexplicit: false,
             asdeps: false,
             needed: false,
@@ -17,6 +19,7 @@ impl Default for Pacman {
     }
 }
 
+#[allow(non_snake_case)]
 impl Pacman {
     pub fn new() -> Pacman {
         Pacman {
@@ -42,7 +45,7 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        enter_and_wait(proc)
+        self.enter_and_wait(proc)
     }
 
     pub fn S_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
@@ -55,7 +58,7 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        enter_and_wait(proc)
+        self.enter_and_wait(proc)
     }
 
     pub fn U_status(&self, pkg: &str) -> ExitStatus {
@@ -68,7 +71,7 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        enter_and_wait(proc)
+        self.enter_and_wait(proc)
     }
 
     pub fn U_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
@@ -81,7 +84,7 @@ impl Pacman {
             .spawn()
             .expect("can't run pacman");
 
-        enter_and_wait(proc)
+        self.enter_and_wait(proc)
     }
 
     // NOTE: Is there a way to write this better in rust?
@@ -102,14 +105,16 @@ impl Pacman {
 
         args.iter().map(|x| x.to_string()).collect()
     }
-}
 
-fn enter_and_wait(mut proc: Child) -> ExitStatus {
-    proc.stdin
-        .as_ref()
-        .unwrap()
-        .write("y\n".as_bytes())
-        .unwrap();
+    fn enter_and_wait(&self, mut proc: Child) -> ExitStatus {
+        if self.yes {
+            proc.stdin
+                .as_ref()
+                .unwrap()
+                .write("y\n".as_bytes())
+                .unwrap();
+        }
 
-    proc.wait().unwrap()
+        proc.wait().unwrap()
+    }
 }

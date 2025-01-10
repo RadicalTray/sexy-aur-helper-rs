@@ -40,7 +40,7 @@ pub fn upgrade(g: &Globals) {
     println!();
 
     let clone_path = g.cache_path.clone().join("clone");
-    let (new, old, err) = fetch_pkgs(
+    let (old, new, err) = fetch_pkgs(
         &clone_path,
         aur_pkgs.iter().map(|x| x.name().to_string()).collect(),
     );
