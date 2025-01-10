@@ -23,7 +23,7 @@ pub fn fetch_aur_data(url: &str, curr_dir: &PathBuf, filename: &str) -> Result<(
     Ok(())
 }
 
-pub fn fetch_pkg(g: &Globals) -> Result<(), String> {
+pub fn fetch_pkglist(g: &Globals) -> Result<(), String> {
     fetch_aur_data(URL_PKG, &g.cache_path, FILENAME_PKG)
 }
 

@@ -1,5 +1,5 @@
-use std::process::{Command, ExitStatus, Output};
 use std::path::PathBuf;
+use std::process::{Command, ExitStatus, Output};
 
 pub struct Git {
     cwd: PathBuf,
