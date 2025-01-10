@@ -40,7 +40,7 @@ pub fn upgrade(g: &Globals) {
     println!();
 
     let clone_path = g.cache_path.clone().join("clone");
-    fetch_pkgs(
+    let (new, old, err) = fetch_pkgs(
         &clone_path,
         aur_pkgs.iter().map(|x| x.name().to_string()).collect(),
     );
@@ -51,7 +51,7 @@ pub fn upgrade(g: &Globals) {
     }
     prompt_accept();
 
-    // below could be run in another thread then wait for it while user is reading
+    // prob don't need multithread?
     let build_stack = setup_build_stack(&aur_pkgs);
     let mut set: HashSet<&str> = HashSet::new();
 
@@ -73,7 +73,7 @@ pub fn upgrade(g: &Globals) {
 
         let cwd = clone_path.clone().join(pkg.name());
         env::set_current_dir(cwd).unwrap();
-        let built_pkg_paths = match makepkg(pkg.name()) {
+        let built_pkg_paths = match build(pkg.name()) {
             Ok(v) => v,
             Err(pkg) => {
                 err_pkgs.push(pkg);
@@ -169,7 +169,10 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     prepare(g);
 
     let clone_path = g.cache_path.clone().join("clone");
-    let (cloned_pkgs, err_pkgs) = fetch_pkgs(&clone_path, pkgs);
+    let (mut old_pkgs, new_pkgs, err_pkgs) = fetch_pkgs(&clone_path, pkgs);
+    old_pkgs.extend(new_pkgs);
+    let fetched_pkgs = old_pkgs;
+
     if quit_on_err && err_pkgs.len() > 0 {
         eprintln!("Error happened while cloning:");
         for pkg in err_pkgs {
@@ -178,7 +181,7 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
         return;
     }
 
-    let (built_pkg_paths, err_pkgs) = makepkg_all(&clone_path, cloned_pkgs);
+    let (built_pkg_paths, err_pkgs) = build_all(&clone_path, fetched_pkgs);
     if quit_on_err && err_pkgs.len() > 0 {
         eprintln!("Error happened while building:");
         for pkg in err_pkgs {
@@ -195,7 +198,7 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
 }
 
 // TODO: resolve the deps in here
-fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
+fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>, Vec<String>) {
     let clone_path = Arc::new(clone_path.clone());
     env::set_current_dir(&*clone_path).unwrap();
 
@@ -228,12 +231,14 @@ fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<Stri
         println!("{output}");
         println!();
     }
+    for pkg in &err_pkgs {
+        println!("{pkg}: Error happend while fetching/cloning!");
+    }
+    println!();
     prompt_accept();
 
-    let mut fetched_pkgs = Vec::from(old_pkgs);
-    // NOTE: is there a way without cloning?
-    fetched_pkgs.extend(new_pkgs_n_outputs.iter().map(move |x| x.0.clone()));
-    (fetched_pkgs, err_pkgs)
+    // do i need to clone x.0
+    (old_pkgs, new_pkgs_n_outputs.iter().map(|x| x.0.clone()).collect(), err_pkgs)
 }
 
 fn fetch_pkg(
@@ -293,7 +298,7 @@ fn read_dir_files(dir: &PathBuf) -> String {
     outputs
 }
 
-fn makepkg_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
+fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
     let mut built_pkg_paths = Vec::with_capacity(pkgs.len());
     let mut err_pkgs = Vec::new();
 
@@ -303,7 +308,7 @@ fn makepkg_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<Str
         Git::cwd(cwd.clone()).reset_hard_origin();
 
         env::set_current_dir(cwd).unwrap();
-        match makepkg(&pkg) {
+        match build(&pkg) {
             Ok(v) => built_pkg_paths.extend(v),
             Err(pkg) => {
                 err_pkgs.push(pkg);
@@ -315,7 +320,7 @@ fn makepkg_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<Str
     (built_pkg_paths, err_pkgs)
 }
 
-fn makepkg(pkg: &str) -> Result<Vec<String>, String> {
+fn build(pkg: &str) -> Result<Vec<String>, String> {
     let status = Makepkg::new().status();
     match status.code().unwrap() {
         13 | 0 => {
