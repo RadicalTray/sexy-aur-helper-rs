@@ -10,9 +10,9 @@ impl Git {
         Git { cwd }
     }
 
-    pub fn diff_fetch(&self) -> Output {
+    pub fn diff_fetch_color(&self) -> Output {
         Command::new("git")
-            .args(["diff", "HEAD", "FETCH_HEAD"])
+            .args(["diff", "HEAD", "FETCH_HEAD", "--color=always"])
             .current_dir(&self.cwd)
             .output()
             .expect("can't run git")

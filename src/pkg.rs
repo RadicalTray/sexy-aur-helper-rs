@@ -47,15 +47,7 @@ pub fn upgrade(g: &Globals) {
     for pkg in &aur_pkgs {
         println!("\t{}", pkg.name());
     }
-
-    print!("Accept [Y/n] ");
-    io::stdout().flush().unwrap();
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).expect("read_line");
-    let buffer = buffer.trim();
-    if buffer != "" && buffer != "y" {
-        process::exit(1);
-    }
+    prompt_accept();
 
     // below could be run in another thread then wait for it while user is reading
     let build_stack = setup_build_stack(&aur_pkgs);
@@ -153,6 +145,18 @@ fn push_to_build_stack<'a>(
     }
 }
 
+fn prompt_accept() {
+    print!("Accept [Y/n] ");
+    io::stdout().flush().unwrap();
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer).expect("read_line");
+    let buffer = buffer.trim();
+    if buffer != "" && buffer != "y" {
+        println!();
+        process::exit(1);
+    }
+}
+
 // TODO:
 //  0 notify changes in PKGBUILD
 //  1 manage dependencies
@@ -193,23 +197,21 @@ fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<Stri
     env::set_current_dir(clone_path).unwrap();
 
     let mut old_pkgs = Vec::with_capacity(pkgs.len());
-    let mut new_pkgs = Vec::with_capacity(pkgs.len());
+    let mut new_pkgs_n_outputs = Vec::new();
     let mut err_pkgs = Vec::new();
 
     for pkg in pkgs {
         let pkg_dir = clone_path.clone().join(&pkg);
         if pkg_dir.exists() {
             let git = Git::cwd(pkg_dir);
-
-            git.reset_hard_origin();
             let status = git.fetch();
 
             if !status.success() {
                 err_pkgs.push(pkg);
             } else {
-                let diff_output = String::from_utf8(git.diff_fetch().stdout).expect("UTF-8");
+                let diff_output = String::from_utf8(git.diff_fetch_color().stdout).expect("UTF-8");
                 if !diff_output.trim().is_empty() {
-                    new_pkgs.push(pkg);
+                    new_pkgs_n_outputs.push((pkg, diff_output));
                 } else {
                     old_pkgs.push(pkg);
                 }
@@ -221,14 +223,42 @@ fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<Stri
             if !status.success() {
                 err_pkgs.push(pkg);
             } else {
-                new_pkgs.push(pkg);
+                let output = read_dir_files(&pkg_dir);
+                new_pkgs_n_outputs.push((pkg, output));
             }
         };
     }
 
+    // TODO: use pager?
+    for (pkg, output) in &new_pkgs_n_outputs {
+        println!("{pkg}");
+        println!("{output}");
+        println!();
+    }
+    prompt_accept();
+
     let mut fetched_pkgs = Vec::from(old_pkgs);
-    fetched_pkgs.extend(new_pkgs);
+    // NOTE: is there a way without cloning?
+    fetched_pkgs.extend(new_pkgs_n_outputs.iter().map(move |x| x.0.clone()));
     (fetched_pkgs, err_pkgs)
+}
+
+fn read_dir_files(dir: &PathBuf) -> String {
+    let mut outputs = String::new();
+    for entry in fs::read_dir(dir).unwrap() {
+        let entry = entry.unwrap();
+        let output = match fs::read_to_string(entry.path()) {
+            Ok(s) => {
+                format!("{}:\n{}\n", entry.path().display(), s)
+            }
+            Err(_) => {
+                format!("{}: not UTF-8 or something idk.\n\n", entry.path().display())
+            }
+        };
+
+        outputs.push_str(&output);
+    }
+    outputs
 }
 
 fn makepkg_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
@@ -237,8 +267,10 @@ fn makepkg_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<Str
 
     for pkg in pkgs {
         let cwd = clone_path.clone().join(&pkg);
-        env::set_current_dir(cwd).unwrap();
 
+        Git::cwd(cwd.clone()).reset_hard_origin();
+
+        env::set_current_dir(cwd).unwrap();
         match makepkg(&pkg) {
             Ok(v) => built_pkg_paths.extend(v),
             Err(pkg) => {
