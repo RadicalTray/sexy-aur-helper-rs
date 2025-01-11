@@ -10,7 +10,7 @@ pub struct Makepkg {
 }
 
 impl Default for Makepkg {
-    fn default() -> Makepkg {
+    fn default() -> Self {
         Makepkg {
             nobuild: false,
             noextract: false,
@@ -23,7 +23,7 @@ impl Default for Makepkg {
 }
 
 impl Makepkg {
-    pub fn new() -> Makepkg {
+    pub fn new() -> Self {
         Makepkg {
             ..Default::default()
         }

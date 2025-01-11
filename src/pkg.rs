@@ -7,7 +7,7 @@ use crate::globals::*;
 use crate::makepkg::Makepkg;
 use crate::pacman::Pacman;
 use crate::threadpool::ThreadPool;
-use alpm::{Alpm, Package};
+use alpm::{Alpm, Package, Version};
 use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
 use std::io::{self, Write};
@@ -15,6 +15,8 @@ use std::path::{Path, PathBuf};
 use std::process;
 use std::sync::{Arc, Mutex};
 use std::{env, fs};
+
+type PV = (String, Option<Version>);
 
 fn prepare(g: &Globals) {
     let clone_path = g.cache_path.clone().join("clone");
@@ -251,7 +253,11 @@ fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<Stri
     prompt_accept();
 
     // do i need to clone x.0
-    (old_pkgs, new_pkgs_n_outputs.iter().map(|x| x.0.clone()).collect(), err_pkgs)
+    (
+        old_pkgs,
+        new_pkgs_n_outputs.iter().map(|x| x.0.clone()).collect(),
+        err_pkgs,
+    )
 }
 
 fn fetch_pkg(

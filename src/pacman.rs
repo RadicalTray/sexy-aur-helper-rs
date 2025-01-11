@@ -9,7 +9,7 @@ pub struct Pacman {
 }
 
 impl Default for Pacman {
-    fn default() -> Pacman {
+    fn default() -> Self {
         Pacman {
             yes: false,
             asexplicit: false,
@@ -21,7 +21,7 @@ impl Default for Pacman {
 
 #[allow(non_snake_case)]
 impl Pacman {
-    pub fn new() -> Pacman {
+    pub fn new() -> Self {
         Pacman {
             ..Default::default()
         }

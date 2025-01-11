@@ -6,7 +6,7 @@ pub struct Git {
 }
 
 impl Git {
-    pub fn cwd(cwd: PathBuf) -> Git {
+    pub fn cwd(cwd: PathBuf) -> Self {
         Git { cwd }
     }
 
