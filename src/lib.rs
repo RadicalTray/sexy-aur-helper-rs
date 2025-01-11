@@ -3,6 +3,7 @@
 mod alpm;
 mod bash;
 mod build;
+mod clear;
 mod fetch;
 mod git;
 mod globals;
@@ -46,6 +47,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
         sync::STR => sync::run(globals, args),
         upgrade::STR => upgrade::run(globals, args),
         update::STR => update::run(globals, args),
+        clear::STR => clear::run(globals, args),
         _ => Err(format!("invalid command `{cmd}`")),
     } {
         print_error_w_help(&e);

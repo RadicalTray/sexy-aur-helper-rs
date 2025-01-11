@@ -2,6 +2,7 @@ use crate::search;
 use crate::sync;
 use crate::update;
 use crate::upgrade;
+use crate::clear;
 use std::fs;
 use std::io;
 use std::io::Write;
@@ -22,11 +23,15 @@ Upgrade system and AUR packages:
 
 Update the AUR package list:
 \tsaur {}
+
+Clear built packages:
+\tsaur {}
 ",
         search::STR,
         sync::STR,
         upgrade::STR,
         update::STR,
+        clear::STR,
     );
 
     if to_stderr {

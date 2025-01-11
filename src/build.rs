@@ -3,6 +3,8 @@ use crate::makepkg::Makepkg;
 use crate::utils::read_lines_to_strings;
 use std::path::PathBuf;
 
+/// # NOTES
+/// WILL `git reset orign --hard` the aur repo
 pub fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
     let mut built_pkg_paths = Vec::with_capacity(pkgs.len());
     let mut err_pkgs = Vec::new();
@@ -24,6 +26,8 @@ pub fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<S
     (built_pkg_paths, err_pkgs)
 }
 
+/// # NOTES
+/// WON'T `git reset orign --hard` the aur repo
 pub fn build(cwd: PathBuf, noextract: bool, pkg: &str) -> Result<Vec<String>, String> {
     let status = Makepkg {
         cwd,
