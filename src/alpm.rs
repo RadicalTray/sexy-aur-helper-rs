@@ -1,5 +1,5 @@
+use crate::fetch::{get_pkgbases, get_pkgs};
 use crate::globals::Globals;
-use crate::pkg::{get_pkgbases, get_pkgs};
 use alpm::{Alpm, Package};
 
 pub fn get_local_aur_pkgs<'a>(

@@ -1,6 +1,6 @@
+use crate::fetch::{get_pkgbases, is_in_pkgbases};
 use crate::globals::Globals;
-use crate::pkg::is_in_pkgbases;
-use crate::pkg::{get_pkgbases, sync};
+use crate::pkg::sync;
 
 pub const STR: &str = "sync";
 

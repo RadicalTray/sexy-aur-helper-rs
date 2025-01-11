@@ -1,5 +1,5 @@
-use crate::cmds::{fetch_pkgbase, fetch_pkglist};
 use crate::globals::*;
+use crate::fetch::{fetch_pkgbase, fetch_pkglist};
 
 pub const STR: &str = "update-pkg-list";
 

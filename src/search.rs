@@ -1,5 +1,5 @@
+use crate::fetch::get_pkgbases;
 use crate::globals::Globals;
-use crate::pkg::get_pkgbases;
 
 pub const STR: &str = "search";
 

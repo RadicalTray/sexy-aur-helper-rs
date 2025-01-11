@@ -5,6 +5,7 @@ use crate::utils::*;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 pub fn fetch_pkgs(
@@ -112,4 +113,55 @@ fn read_dir_files(dir: &PathBuf) -> String {
         outputs.push_str(&output);
     }
     outputs
+}
+
+pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
+    let pkgbase_path = g.cache_path.clone().join(FILENAME_PKGBASE);
+    if !pkgbase_path.exists() {
+        fetch_pkgbase(g)?;
+    }
+    Ok(read_file_lines_to_strings(pkgbase_path))
+}
+
+pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
+    let pkg_path = g.cache_path.clone().join(FILENAME_PKG);
+    if !pkg_path.exists() {
+        fetch_pkglist(g)?;
+    }
+
+    Ok(read_file_lines_to_strings(pkg_path))
+}
+
+pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
+    let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
+    (pkgs, err_pkgs)
+}
+
+/// `filename` should be escapeable with ''
+pub fn fetch_aur_data(url: &str, curr_dir: &PathBuf, filename: &str) -> Result<(), String> {
+    let sh_cmd = format!("curl {url} | gzip -cd > '{filename}'");
+
+    let status = Command::new("sh")
+        .args(["-c", sh_cmd.as_str()])
+        .current_dir(curr_dir)
+        .status();
+
+    let status = match status {
+        Ok(o) => o,
+        Err(_) => return Err(String::from("sh could not be executed")),
+    };
+
+    if !status.success() {
+        return Err(format!("`{sh_cmd}` failed"));
+    }
+
+    Ok(())
+}
+
+pub fn fetch_pkglist(g: &Globals) -> Result<(), String> {
+    fetch_aur_data(URL_PKG, &g.cache_path, FILENAME_PKG)
+}
+
+pub fn fetch_pkgbase(g: &Globals) -> Result<(), String> {
+    fetch_aur_data(URL_PKGBASE, &g.cache_path, FILENAME_PKGBASE)
 }

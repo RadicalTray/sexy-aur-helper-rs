@@ -1,17 +1,14 @@
 // TODO: refactor
 
 use crate::alpm::get_local_aur_pkgs;
-use crate::cmds::{fetch_pkgbase, fetch_pkglist};
+use crate::build::*;
 use crate::fetch::*;
-use crate::git::Git;
 use crate::globals::*;
-use crate::makepkg::Makepkg;
 use crate::pacman::Pacman;
 use crate::utils::*;
 use alpm::{Alpm, Package, Version};
 use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
-use std::path::PathBuf;
 use std::process;
 use std::{env, fs};
 
@@ -82,7 +79,7 @@ pub fn upgrade(g: &Globals) {
             }
         };
 
-        install(built_pkg_paths);
+        Pacman::new().U_all_status(built_pkg_paths).code().unwrap();
     }
 
     if err_pkgs.len() > 0 {
@@ -188,7 +185,7 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
 
     // TODO: print stats
 
-    let status_code = install(built_pkg_paths);
+    let status_code = Pacman::new().U_all_status(built_pkg_paths).code().unwrap();
     if err_pkgs.len() > 0 {
         eprintln!("Error happened while building:");
         for pkg in err_pkgs {
@@ -197,70 +194,4 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     }
 
     process::exit(status_code);
-}
-
-fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
-    let mut built_pkg_paths = Vec::with_capacity(pkgs.len());
-    let mut err_pkgs = Vec::new();
-
-    for pkg in pkgs {
-        let cwd = clone_path.clone().join(&pkg);
-
-        Git::cwd(cwd.clone()).reset_hard_origin();
-
-        env::set_current_dir(cwd).unwrap();
-        match build(&pkg) {
-            Ok(v) => built_pkg_paths.extend(v),
-            Err(pkg) => {
-                err_pkgs.push(pkg);
-                continue;
-            }
-        };
-    }
-
-    (built_pkg_paths, err_pkgs)
-}
-
-fn build(pkg: &str) -> Result<Vec<String>, String> {
-    let status = Makepkg::new().status();
-    match status.code().unwrap() {
-        13 | 0 => {
-            let output = Makepkg {
-                packagelist: true,
-                ..Default::default()
-            }
-            .output();
-
-            Ok(read_lines_to_strings(
-                String::from_utf8(output.stdout).expect("Output not UTF-8"),
-            ))
-        }
-        _ => Err(pkg.to_string()),
-    }
-}
-
-fn install(pkg_paths: Vec<String>) -> i32 {
-    Pacman::new().U_all_status(pkg_paths).code().unwrap()
-}
-
-pub fn get_pkgbases(g: &Globals) -> Result<Vec<String>, String> {
-    let pkgbase_path = g.cache_path.clone().join(FILENAME_PKGBASE);
-    if !pkgbase_path.exists() {
-        fetch_pkgbase(g)?;
-    }
-    Ok(read_file_lines_to_strings(pkgbase_path))
-}
-
-pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
-    let pkg_path = g.cache_path.clone().join(FILENAME_PKG);
-    if !pkg_path.exists() {
-        fetch_pkglist(g)?;
-    }
-
-    Ok(read_file_lines_to_strings(pkg_path))
-}
-
-pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
-    let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
-    (pkgs, err_pkgs)
 }
