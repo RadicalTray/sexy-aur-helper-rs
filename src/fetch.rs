@@ -14,6 +14,7 @@ pub type PV = (String, Option<Version>);
 pub type VPV = Vec<(String, Option<Version>)>;
 
 pub fn fetch_pkgs(clone_path: &PathBuf, pkgs: VPV) -> (VPV, VPV, VPV) {
+    println!("Fetching AUR.");
     let clone_path = Arc::new(clone_path.clone());
     env::set_current_dir(&*clone_path).unwrap();
 
@@ -75,7 +76,6 @@ fn fetch_pkg(
     new_pkgs_n_outputs: Arc<Mutex<Vec<(PV, String)>>>,
     err_pkgs: Arc<Mutex<VPV>>,
 ) {
-    println!("Fetching {}", pkg.0);
     let pkg_dir = clone_path.clone().join(&pkg.0);
     if pkg_dir.exists() {
         let git = Git::cwd(pkg_dir);

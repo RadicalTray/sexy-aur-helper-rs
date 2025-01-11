@@ -19,6 +19,7 @@ impl Bash {
             .unwrap()
     }
 
+    #[allow(dead_code)]
     pub fn status(&self, cmd: &str) -> ExitStatus {
         Command::new("bash")
             .arg("-c")

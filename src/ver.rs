@@ -3,16 +3,14 @@ use crate::fetch::{PV, VPV};
 use crate::git::Git;
 use crate::makepkg::Makepkg;
 use crate::threadpool::ThreadPool;
-use alpm::Version;
-use std::cmp::Ordering::{Equal, Greater, Less};
+use std::cmp::Ordering::Less;
 use std::collections::HashSet;
 use std::env;
-use std::io;
-use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 pub fn get_pkgs_to_upgrade(clone_path: &PathBuf, pkgs: VPV) -> (HashSet<String>, Vec<String>) {
+    println!("Filtering packages to upgrade.");
     let clone_path = Arc::new(clone_path.clone());
     env::set_current_dir(&*clone_path).unwrap();
 
@@ -51,7 +49,7 @@ fn get_pkg_to_upgrade(
 
     let cwd = clone_path.clone().join(&pkg);
 
-    let status = Git::cwd(cwd.clone()).reset_hard_origin();
+    let status = Git::cwd(cwd.clone()).reset_hard_origin_mute();
     if !status.success() {
         err_pkgs.lock().unwrap().push(pkg);
         return;
@@ -84,8 +82,7 @@ get_full_version
     let new_ver = String::from_utf8(output.stdout).expect("pkgver not UTF-8");
     let new_ver = new_ver.trim();
 
-    println!("NEW VERSIONNNNN `{new_ver}`");
-    if let Less = alpm::vercmp(old_ver.as_str(), new_ver) {
+    if alpm::vercmp(old_ver.as_str(), new_ver) == Less {
         pkgs_to_upgrade.lock().unwrap().insert(pkg);
     }
 }

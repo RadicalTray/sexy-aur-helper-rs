@@ -53,6 +53,13 @@ pub fn upgrade(g: &Globals) {
     let fetched_pkgs = old_pkgs;
 
     let (pkgs_to_build, err_pkgs) = get_pkgs_to_upgrade(&clone_path, fetched_pkgs);
+    if err_pkgs.len() > 0 {
+        for pkg in err_pkgs {
+            eprintln!("{pkg}: error while filtering packages to upgrade!");
+        }
+        eprintln!();
+    }
+
     let pkgs_to_build: Vec<_> = aur_pkgs
         .iter()
         .filter(|x| pkgs_to_build.contains(x.name()))

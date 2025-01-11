@@ -35,6 +35,7 @@ impl Pacman {
             .expect("can't run pacman")
     }
 
+    #[allow(dead_code)]
     pub fn S_status(&self, pkg: &str) -> ExitStatus {
         let proc = Command::new("sudo")
             .arg("pacman")
@@ -48,6 +49,7 @@ impl Pacman {
         self.enter_and_wait(proc)
     }
 
+    #[allow(dead_code)]
     pub fn S_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
         let proc = Command::new("sudo")
             .arg("pacman")
@@ -61,6 +63,7 @@ impl Pacman {
         self.enter_and_wait(proc)
     }
 
+    #[allow(dead_code)]
     pub fn U_status(&self, pkg: &str) -> ExitStatus {
         let proc = Command::new("sudo")
             .arg("pacman")

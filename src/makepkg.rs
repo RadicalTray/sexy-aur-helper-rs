@@ -26,15 +26,9 @@ impl Default for Makepkg {
 }
 
 impl Makepkg {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Makepkg {
-            ..Default::default()
-        }
-    }
-
-    pub fn cwd(cwd: PathBuf) -> Self {
-        Makepkg {
-            cwd,
             ..Default::default()
         }
     }
