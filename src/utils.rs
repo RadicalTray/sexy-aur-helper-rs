@@ -1,8 +1,8 @@
+use crate::clear;
 use crate::search;
 use crate::sync;
 use crate::update;
 use crate::upgrade;
-use crate::clear;
 use std::fs;
 use std::io;
 use std::io::Write;

@@ -29,15 +29,18 @@ pub fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<S
 /// # NOTES
 /// WON'T `git reset orign --hard` the aur repo
 pub fn build(cwd: PathBuf, noextract: bool, pkg: &str) -> Result<Vec<String>, String> {
-    let status = Makepkg {
-        cwd,
+    match (Makepkg {
+        cwd: cwd.clone(),
         noextract,
         ..Default::default()
-    }
-    .status();
-    match status.code().unwrap() {
+    })
+    .status()
+    .code()
+    .unwrap()
+    {
         13 | 0 => {
             let output = Makepkg {
+                cwd: cwd,
                 packagelist: true,
                 ..Default::default()
             }

@@ -20,7 +20,7 @@ impl Default for Makepkg {
             packagelist: false,
             cleanbuild: false,
             clean: false,
-            cwd: PathBuf::new(),
+            cwd: PathBuf::from("."),
         }
     }
 }

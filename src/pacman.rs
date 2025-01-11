@@ -1,3 +1,4 @@
+use std::io;
 use std::io::Write;
 use std::process::{Child, Command, ExitStatus, Stdio};
 
@@ -116,6 +117,9 @@ impl Pacman {
                 .unwrap()
                 .write("y\n".as_bytes())
                 .unwrap();
+
+            println!();
+            io::stdout().flush().unwrap();
         }
 
         proc.wait().unwrap()
