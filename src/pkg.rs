@@ -52,15 +52,24 @@ pub fn upgrade(g: &Globals) {
     old_pkgs.extend(new_pkgs);
     let fetched_pkgs = old_pkgs;
 
-    let pkgs_to_build = get_pkgs_to_upgrade(&clone_path, fetched_pkgs);
+    let (pkgs_to_build, err_pkgs) = get_pkgs_to_upgrade(&clone_path, fetched_pkgs);
+    let pkgs_to_build: Vec<_> = aur_pkgs
+        .iter()
+        .filter(|x| pkgs_to_build.contains(x.name()))
+        .collect();
 
-    println!("{} packages to be built:", aur_pkgs.len());
-    for pkg in &aur_pkgs {
+    if pkgs_to_build.len() == 0 {
+        println!("Nothing to build.");
+        return;
+    }
+
+    println!("{} packages to be built:", pkgs_to_build.len());
+    for pkg in &pkgs_to_build {
         println!("\t{}", pkg.name());
     }
     prompt_accept();
 
-    let build_stack = setup_build_stack(&aur_pkgs);
+    let build_stack = setup_build_stack(&pkgs_to_build);
     let mut set: HashSet<&str> = HashSet::new();
 
     let mut err_pkgs: Vec<String> = Vec::new();
@@ -89,28 +98,28 @@ pub fn upgrade(g: &Globals) {
         }
     }
 
-    if set.len() != aur_pkgs.len() {
+    if set.len() != pkgs_to_build.len() {
         println!("pkg not in build stack:");
-        for pkg in aur_pkgs {
+        for pkg in pkgs_to_build {
             if !set.contains(pkg.name()) {
                 println!("\t{}", pkg.name());
             }
-            // set containing pkgs not in aur_pkgs should be impossible
+            // set containing pkgs not in pkgs_to_build should be impossible
         }
         process::exit(1);
     }
 }
 
-fn setup_build_stack<'a>(aur_pkgs: &Vec<&'a Package>) -> Vec<&'a Package> {
-    let mut build_stack: Vec<_> = Vec::with_capacity(aur_pkgs.len());
+fn setup_build_stack<'a>(pkgs: &Vec<&'a &'a Package>) -> Vec<&'a &'a Package> {
+    let mut build_stack: Vec<_> = Vec::with_capacity(pkgs.len());
 
     // BUG: will not include a package that depends on each other
     // in reverse so the build stack has first packages last
-    for pkg in aur_pkgs.iter().rev() {
+    for pkg in pkgs.iter().rev() {
         let is_aur_pkg_dep = {
             let mut tmp = false;
             for pkg_name in pkg.required_by() {
-                if aur_pkgs
+                if pkgs
                     .iter()
                     .map(|x| x.name())
                     .collect::<Vec<&str>>()
@@ -125,7 +134,7 @@ fn setup_build_stack<'a>(aur_pkgs: &Vec<&'a Package>) -> Vec<&'a Package> {
         };
 
         if !is_aur_pkg_dep {
-            push_to_build_stack(&aur_pkgs, &mut build_stack, pkg);
+            push_to_build_stack(&pkgs, &mut build_stack, pkg);
         }
     }
 
@@ -134,9 +143,9 @@ fn setup_build_stack<'a>(aur_pkgs: &Vec<&'a Package>) -> Vec<&'a Package> {
 
 // algorithm to build deps first
 fn push_to_build_stack<'a>(
-    all_pkgs: &Vec<&'a Package>,
-    stack: &mut Vec<&'a Package>,
-    pkg: &'a Package,
+    all_pkgs: &Vec<&'a &'a Package>,
+    stack: &mut Vec<&'a &'a Package>,
+    pkg: &'a &'a Package,
 ) {
     stack.push(pkg);
     let mut deps = pkg.depends().to_list_mut();

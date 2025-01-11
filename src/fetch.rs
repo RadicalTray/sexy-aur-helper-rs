@@ -40,17 +40,25 @@ pub fn fetch_pkgs(clone_path: &PathBuf, pkgs: VPV) -> (VPV, VPV, VPV) {
     let err_pkgs = Arc::try_unwrap(err_pkgs).unwrap().into_inner().unwrap();
 
     // TODO: use pager?
-    println!();
-    for ((pkg, _), output) in &new_pkgs_n_outputs {
-        println!("{pkg}:");
-        println!("{output}");
+    if new_pkgs_n_outputs.len() > 0 {
+        println!("AUR Repo diffs:");
+        for ((pkg, _), output) in &new_pkgs_n_outputs {
+            println!("{pkg}:");
+            println!("{output}");
+            println!();
+        }
         println!();
+        prompt_accept();
+    } else if err_pkgs.len() == 0 {
+        println!("No changes in AUR repo.");
     }
-    for (pkg, _) in &err_pkgs {
-        println!("{pkg}: Error happend while fetching/cloning!");
+
+    if err_pkgs.len() > 0 {
+        println!("Error occured while fetching/cloning!");
+        for (pkg, _) in &err_pkgs {
+            println!("{pkg}: Error happend while fetching/cloning!");
+        }
     }
-    println!();
-    prompt_accept();
 
     // do i need to clone x.0
     (

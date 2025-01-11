@@ -53,6 +53,7 @@ impl Makepkg {
             .current_dir(&self.cwd)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .status()
             .expect("can't run makepkg")
     }

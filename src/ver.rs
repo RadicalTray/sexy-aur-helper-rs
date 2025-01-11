@@ -1,17 +1,22 @@
 use crate::bash::Bash;
 use crate::fetch::{PV, VPV};
+use crate::git::Git;
 use crate::makepkg::Makepkg;
 use crate::threadpool::ThreadPool;
 use alpm::Version;
+use std::cmp::Ordering::{Equal, Greater, Less};
+use std::collections::HashSet;
 use std::env;
+use std::io;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-pub fn get_pkgs_to_upgrade(clone_path: &PathBuf, pkgs: VPV) -> (Vec<String>, Vec<String>) {
+pub fn get_pkgs_to_upgrade(clone_path: &PathBuf, pkgs: VPV) -> (HashSet<String>, Vec<String>) {
     let clone_path = Arc::new(clone_path.clone());
     env::set_current_dir(&*clone_path).unwrap();
 
-    let pkgs_to_upgrade = Arc::new(Mutex::new(Vec::new()));
+    let pkgs_to_upgrade = Arc::new(Mutex::new(HashSet::new()));
     let err_pkgs = Arc::new(Mutex::new(Vec::new()));
 
     let pool = ThreadPool::new(std::thread::available_parallelism().unwrap().get()).unwrap();
@@ -31,21 +36,26 @@ pub fn get_pkgs_to_upgrade(clone_path: &PathBuf, pkgs: VPV) -> (Vec<String>, Vec
     let err_pkgs = Arc::try_unwrap(err_pkgs).unwrap().into_inner().unwrap();
 
     (pkgs_to_upgrade, err_pkgs)
-    // then build with `--noextract` (because --nobuild already fetched things)
 }
 
 fn get_pkg_to_upgrade(
     clone_path: &PathBuf,
     pv: PV,
-    pkgs_to_upgrade: Arc<Mutex<Vec<String>>>,
+    pkgs_to_upgrade: Arc<Mutex<HashSet<String>>>,
     err_pkgs: Arc<Mutex<Vec<String>>>,
 ) {
     let (pkg, old_ver) = match pv {
         (p, Some(v)) => (p, v),
-        (p, None) => panic!("what the fuck are you doing?"),
+        (_, None) => panic!("what the fuck are you doing?"),
     };
 
     let cwd = clone_path.clone().join(&pkg);
+
+    let status = Git::cwd(cwd.clone()).reset_hard_origin();
+    if !status.success() {
+        err_pkgs.lock().unwrap().push(pkg);
+        return;
+    }
 
     let makepkg = Makepkg {
         cwd: cwd.clone(),
@@ -59,13 +69,23 @@ fn get_pkg_to_upgrade(
     }
 
     let bash = Bash::cwd(cwd);
-    let output = bash.output("source PKGBUILD; echo $pkgver");
-    let new_ver = String::from_utf8(output.stdout).expect("pkgver not UTF-8");
-    println!("NEW VERSIONNNNN {new_ver}");
-    let new_ver = Version::new(new_ver);
+    let output = bash.output(
+        "
+source PKGBUILD
+source /usr/share/makepkg/util/pkgbuild.sh
+get_full_version
+",
+    );
+    if !output.status.success() {
+        err_pkgs.lock().unwrap().push(pkg);
+        return;
+    }
 
-    if old_ver < new_ver {
-        println!("{old_ver} < {new_ver}");
-        pkgs_to_upgrade.lock().unwrap().push(pkg);
+    let new_ver = String::from_utf8(output.stdout).expect("pkgver not UTF-8");
+    let new_ver = new_ver.trim();
+
+    println!("NEW VERSIONNNNN `{new_ver}`");
+    if let Less = alpm::vercmp(old_ver.as_str(), new_ver) {
+        pkgs_to_upgrade.lock().unwrap().insert(pkg);
     }
 }
