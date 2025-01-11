@@ -14,6 +14,7 @@ mod threadpool;
 mod update;
 mod upgrade;
 mod utils;
+mod ver;
 
 use std::process;
 use utils::print_error_w_help;

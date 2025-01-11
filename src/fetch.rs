@@ -2,16 +2,18 @@ use crate::git::Git;
 use crate::globals::*;
 use crate::threadpool::ThreadPool;
 use crate::utils::*;
+use alpm::Version;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
-pub fn fetch_pkgs(
-    clone_path: &PathBuf,
-    pkgs: Vec<String>,
-) -> (Vec<String>, Vec<String>, Vec<String>) {
+// (PackageName, Option<Version>)
+pub type PV = (String, Option<Version>);
+pub type VPV = Vec<(String, Option<Version>)>;
+
+pub fn fetch_pkgs(clone_path: &PathBuf, pkgs: VPV) -> (VPV, VPV, VPV) {
     let clone_path = Arc::new(clone_path.clone());
     env::set_current_dir(&*clone_path).unwrap();
 
@@ -20,13 +22,13 @@ pub fn fetch_pkgs(
     let new_pkgs_n_outputs = Arc::new(Mutex::new(Vec::new()));
     let err_pkgs = Arc::new(Mutex::new(Vec::new()));
 
-    for pkg in pkgs {
+    for pv in pkgs {
         let clone_path = Arc::clone(&clone_path);
         let o = Arc::clone(&old_pkgs);
         let n = Arc::clone(&new_pkgs_n_outputs);
         let e = Arc::clone(&err_pkgs);
         pool.execute(move || {
-            fetch_pkg(&*clone_path, pkg, o, n, e);
+            fetch_pkg(&*clone_path, pv, o, n, e);
         });
     }
     drop(pool); // basically wait (too lazy to properly impl it)
@@ -39,12 +41,12 @@ pub fn fetch_pkgs(
 
     // TODO: use pager?
     println!();
-    for (pkg, output) in &new_pkgs_n_outputs {
+    for ((pkg, _), output) in &new_pkgs_n_outputs {
         println!("{pkg}:");
         println!("{output}");
         println!();
     }
-    for pkg in &err_pkgs {
+    for (pkg, _) in &err_pkgs {
         println!("{pkg}: Error happend while fetching/cloning!");
     }
     println!();
@@ -60,13 +62,13 @@ pub fn fetch_pkgs(
 
 fn fetch_pkg(
     clone_path: &PathBuf,
-    pkg: String,
-    old_pkgs: Arc<Mutex<Vec<String>>>,
-    new_pkgs_n_outputs: Arc<Mutex<Vec<(String, String)>>>,
-    err_pkgs: Arc<Mutex<Vec<String>>>,
+    pkg: PV,
+    old_pkgs: Arc<Mutex<VPV>>,
+    new_pkgs_n_outputs: Arc<Mutex<Vec<(PV, String)>>>,
+    err_pkgs: Arc<Mutex<VPV>>,
 ) {
-    println!("Fetching {pkg}");
-    let pkg_dir = clone_path.clone().join(&pkg);
+    println!("Fetching {}", pkg.0);
+    let pkg_dir = clone_path.clone().join(&pkg.0);
     if pkg_dir.exists() {
         let git = Git::cwd(pkg_dir);
         let status = git.fetch();
@@ -83,7 +85,7 @@ fn fetch_pkg(
         }
     } else {
         let status =
-            Git::cwd(clone_path.to_path_buf()).clone(format!("{URL_AUR}/{pkg}.git").as_str());
+            Git::cwd(clone_path.to_path_buf()).clone(format!("{URL_AUR}/{}.git", pkg.0).as_str());
 
         if !status.success() {
             err_pkgs.lock().unwrap().push(pkg);

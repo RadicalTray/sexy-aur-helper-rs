@@ -6,13 +6,12 @@ use crate::fetch::*;
 use crate::globals::*;
 use crate::pacman::Pacman;
 use crate::utils::*;
+use crate::ver::get_pkgs_to_upgrade;
 use alpm::{Alpm, Package, Version};
 use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
 use std::process;
 use std::{env, fs};
-
-type PV = (String, Option<Version>);
 
 fn prepare(g: &Globals) {
     let clone_path = g.cache_path.clone().join("clone");
@@ -38,10 +37,22 @@ pub fn upgrade(g: &Globals) {
     println!();
 
     let clone_path = g.cache_path.clone().join("clone");
-    let (old, new, err) = fetch_pkgs(
+    let (mut old_pkgs, new_pkgs, _err_pkgs) = fetch_pkgs(
         &clone_path,
-        aur_pkgs.iter().map(|x| x.name().to_string()).collect(),
+        aur_pkgs
+            .iter()
+            .map(|x| {
+                (
+                    x.name().to_string(),
+                    Some(Version::new(x.version().as_str())),
+                )
+            })
+            .collect(),
     );
+    old_pkgs.extend(new_pkgs);
+    let fetched_pkgs = old_pkgs;
+
+    let pkgs_to_build = get_pkgs_to_upgrade(&clone_path, fetched_pkgs);
 
     println!("{} packages to be built:", aur_pkgs.len());
     for pkg in &aur_pkgs {
@@ -54,11 +65,8 @@ pub fn upgrade(g: &Globals) {
     //  - run `source PKGBUILD; echo $pkgver`
     // then build with `--noextract` (because --nobuild already fetched things)
 
-    // if new_ver(pkg.ver(), new_ver) {
-    //
-    // }
+    // return and compare
 
-    // prob don't need multithread?
     let build_stack = setup_build_stack(&aur_pkgs);
     let mut set: HashSet<&str> = HashSet::new();
 
@@ -162,14 +170,15 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     prepare(g);
 
     let clone_path = g.cache_path.clone().join("clone");
-    let (mut old_pkgs, new_pkgs, err_pkgs) = fetch_pkgs(&clone_path, pkgs);
+    let (mut old_pkgs, new_pkgs, err_pkgs) =
+        fetch_pkgs(&clone_path, pkgs.into_iter().map(|x| (x, None)).collect());
     old_pkgs.extend(new_pkgs);
-    let fetched_pkgs = old_pkgs;
+    let fetched_pkgs = old_pkgs.iter().map(|x| x.0.clone()).collect();
 
     if quit_on_err && err_pkgs.len() > 0 {
         eprintln!("Error happened while cloning:");
         for pkg in err_pkgs {
-            eprintln!("\t{pkg}");
+            eprintln!("\t{}", pkg.0);
         }
         return;
     }
