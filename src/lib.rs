@@ -2,6 +2,7 @@
 
 mod alpm;
 mod cmds;
+mod fetch;
 mod git;
 mod globals;
 mod makepkg;

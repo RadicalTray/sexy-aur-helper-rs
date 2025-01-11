@@ -2,18 +2,17 @@
 
 use crate::alpm::get_local_aur_pkgs;
 use crate::cmds::{fetch_pkgbase, fetch_pkglist};
+use crate::fetch::*;
 use crate::git::Git;
 use crate::globals::*;
 use crate::makepkg::Makepkg;
 use crate::pacman::Pacman;
-use crate::threadpool::ThreadPool;
+use crate::utils::*;
 use alpm::{Alpm, Package, Version};
 use alpm_utils::depends::satisfies_nover;
 use std::collections::HashSet;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process;
-use std::sync::{Arc, Mutex};
 use std::{env, fs};
 
 type PV = (String, Option<Version>);
@@ -31,7 +30,7 @@ pub fn upgrade(g: &Globals) {
 
     let status = Pacman::Syu_status();
     if !status.success() {
-        process::exit(1);
+        process::exit(status.code().unwrap());
     }
 
     let handle = Alpm::new("/", "/var/lib/pacman").unwrap();
@@ -53,6 +52,15 @@ pub fn upgrade(g: &Globals) {
     }
     prompt_accept();
 
+    // TODO: getver
+    //  - run `makepkg --nobuild`
+    //  - run `source PKGBUILD; echo $pkgver`
+    // then build with `--noextract` (because --nobuild already fetched things)
+
+    // if new_ver(pkg.ver(), new_ver) {
+    //
+    // }
+
     // prob don't need multithread?
     let build_stack = setup_build_stack(&aur_pkgs);
     let mut set: HashSet<&str> = HashSet::new();
@@ -63,15 +71,6 @@ pub fn upgrade(g: &Globals) {
             continue;
         }
         set.insert(pkg.name());
-
-        // TODO: getver
-        //  - run `makepkg --nobuild`
-        //  - run `source PKGBUILD; echo $pkgver`
-        // then build with `--noextract` (because --nobuild already fetched things)
-
-        // if new_ver(pkg.ver(), new_ver) {
-        //
-        // }
 
         let cwd = clone_path.clone().join(pkg.name());
         env::set_current_dir(cwd).unwrap();
@@ -156,18 +155,6 @@ fn push_to_build_stack<'a>(
     }
 }
 
-fn prompt_accept() {
-    print!("Accept [Y/n] ");
-    io::stdout().flush().unwrap();
-    let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer).expect("read_line");
-    let buffer = buffer.trim();
-    if buffer != "" && buffer != "y" {
-        println!();
-        process::exit(1);
-    }
-}
-
 // TODO:
 //  0 notify changes in PKGBUILD
 //  1 manage dependencies
@@ -210,111 +197,6 @@ pub fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
     }
 
     process::exit(status_code);
-}
-
-// TODO: resolve the deps in here
-fn fetch_pkgs(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>, Vec<String>) {
-    let clone_path = Arc::new(clone_path.clone());
-    env::set_current_dir(&*clone_path).unwrap();
-
-    let pool = ThreadPool::new(std::thread::available_parallelism().unwrap().get()).unwrap();
-    let old_pkgs = Arc::new(Mutex::new(Vec::with_capacity(pkgs.len())));
-    let new_pkgs_n_outputs = Arc::new(Mutex::new(Vec::new()));
-    let err_pkgs = Arc::new(Mutex::new(Vec::new()));
-
-    for pkg in pkgs {
-        let clone_path = Arc::clone(&clone_path);
-        let o = Arc::clone(&old_pkgs);
-        let n = Arc::clone(&new_pkgs_n_outputs);
-        let e = Arc::clone(&err_pkgs);
-        pool.execute(move || {
-            fetch_pkg(&*clone_path, pkg, o, n, e);
-        });
-    }
-    drop(pool); // basically wait (too lazy to properly impl it)
-    let old_pkgs = Arc::try_unwrap(old_pkgs).unwrap().into_inner().unwrap();
-    let new_pkgs_n_outputs = Arc::try_unwrap(new_pkgs_n_outputs)
-        .unwrap()
-        .into_inner()
-        .unwrap();
-    let err_pkgs = Arc::try_unwrap(err_pkgs).unwrap().into_inner().unwrap();
-
-    // TODO: use pager?
-    println!();
-    for (pkg, output) in &new_pkgs_n_outputs {
-        println!("{pkg}:");
-        println!("{output}");
-        println!();
-    }
-    for pkg in &err_pkgs {
-        println!("{pkg}: Error happend while fetching/cloning!");
-    }
-    println!();
-    prompt_accept();
-
-    // do i need to clone x.0
-    (
-        old_pkgs,
-        new_pkgs_n_outputs.iter().map(|x| x.0.clone()).collect(),
-        err_pkgs,
-    )
-}
-
-fn fetch_pkg(
-    clone_path: &PathBuf,
-    pkg: String,
-    old_pkgs: Arc<Mutex<Vec<String>>>,
-    new_pkgs_n_outputs: Arc<Mutex<Vec<(String, String)>>>,
-    err_pkgs: Arc<Mutex<Vec<String>>>,
-) {
-    println!("Fetching {pkg}");
-    let pkg_dir = clone_path.clone().join(&pkg);
-    if pkg_dir.exists() {
-        let git = Git::cwd(pkg_dir);
-        let status = git.fetch();
-
-        if !status.success() {
-            err_pkgs.lock().unwrap().push(pkg);
-        } else {
-            let diff_output = String::from_utf8(git.diff_fetch_color().stdout).expect("UTF-8");
-            if !diff_output.trim().is_empty() {
-                new_pkgs_n_outputs.lock().unwrap().push((pkg, diff_output));
-            } else {
-                old_pkgs.lock().unwrap().push(pkg);
-            }
-        }
-    } else {
-        let status =
-            Git::cwd(clone_path.to_path_buf()).clone(format!("{URL_AUR}/{pkg}.git").as_str());
-
-        if !status.success() {
-            err_pkgs.lock().unwrap().push(pkg);
-        } else {
-            let output = read_dir_files(&pkg_dir);
-            new_pkgs_n_outputs.lock().unwrap().push((pkg, output));
-        }
-    };
-}
-
-fn read_dir_files(dir: &PathBuf) -> String {
-    let mut outputs = String::new();
-    for entry in fs::read_dir(dir).unwrap() {
-        let entry = entry.unwrap();
-        let output = match fs::read_to_string(entry.path()) {
-            Ok(s) => {
-                format!("{}:\n{}\n", entry.path().display(), s)
-            }
-            Err(_) => {
-                format!(
-                    "{}: not UTF-8 or something idk.\n\n",
-                    entry.path().display()
-                )
-            }
-        };
-
-        outputs.push_str(&output);
-    }
-    outputs
 }
 
 fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
@@ -381,12 +263,4 @@ pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
 pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
     let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
     (pkgs, err_pkgs)
-}
-
-fn read_file_lines_to_strings<P: AsRef<Path>>(filepath: P) -> Vec<String> {
-    read_lines_to_strings(fs::read_to_string(filepath).unwrap())
-}
-
-fn read_lines_to_strings(s: String) -> Vec<String> {
-    s.lines().map(String::from).collect()
 }
