@@ -30,8 +30,8 @@ impl ThreadPool {
 
         let mut workers = Vec::with_capacity(size);
 
-        for id in 0..size {
-            workers.push(Worker::new(id, Arc::clone(&receiver)));
+        for _ in 0..size {
+            workers.push(Worker::new(Arc::clone(&receiver)));
         }
 
         Ok(ThreadPool {
@@ -73,14 +73,13 @@ impl fmt::Display for PoolCreationError {
 }
 
 struct Worker {
-    id: usize,
     thread: JoinHandle<()>,
 }
 
 impl Worker {
     /// # Panic
     /// `thread::spawn` panics if os can't create a thread.
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+    fn new(receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
         let thread = thread::spawn(move || {
             loop {
                 let message = receiver.lock().unwrap().recv();
@@ -92,6 +91,6 @@ impl Worker {
             }
         });
 
-        Worker { id, thread }
+        Worker { thread }
     }
 }

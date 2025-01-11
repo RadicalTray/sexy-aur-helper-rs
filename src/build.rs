@@ -1,7 +1,6 @@
 use crate::git::Git;
 use crate::makepkg::Makepkg;
 use crate::utils::read_lines_to_strings;
-use std::env;
 use std::path::PathBuf;
 
 pub fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
@@ -13,8 +12,7 @@ pub fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<S
 
         Git::cwd(cwd.clone()).reset_hard_origin();
 
-        env::set_current_dir(cwd).unwrap();
-        match build(&pkg) {
+        match build(cwd, false, &pkg) {
             Ok(v) => built_pkg_paths.extend(v),
             Err(pkg) => {
                 err_pkgs.push(pkg);
@@ -26,8 +24,13 @@ pub fn build_all(clone_path: &PathBuf, pkgs: Vec<String>) -> (Vec<String>, Vec<S
     (built_pkg_paths, err_pkgs)
 }
 
-pub fn build(pkg: &str) -> Result<Vec<String>, String> {
-    let status = Makepkg::new().status();
+pub fn build(cwd: PathBuf, noextract: bool, pkg: &str) -> Result<Vec<String>, String> {
+    let status = Makepkg {
+        cwd,
+        noextract,
+        ..Default::default()
+    }
+    .status();
     match status.code().unwrap() {
         13 | 0 => {
             let output = Makepkg {

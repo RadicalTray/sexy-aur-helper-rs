@@ -1,6 +1,7 @@
 #![feature(extract_if)]
 
 mod alpm;
+mod bash;
 mod build;
 mod fetch;
 mod git;

@@ -60,13 +60,6 @@ pub fn upgrade(g: &Globals) {
     }
     prompt_accept();
 
-    // TODO: getver
-    //  - run `makepkg --nobuild`
-    //  - run `source PKGBUILD; echo $pkgver`
-    // then build with `--noextract` (because --nobuild already fetched things)
-
-    // return and compare
-
     let build_stack = setup_build_stack(&aur_pkgs);
     let mut set: HashSet<&str> = HashSet::new();
 
@@ -78,8 +71,7 @@ pub fn upgrade(g: &Globals) {
         set.insert(pkg.name());
 
         let cwd = clone_path.clone().join(pkg.name());
-        env::set_current_dir(cwd).unwrap();
-        let built_pkg_paths = match build(pkg.name()) {
+        let built_pkg_paths = match build(cwd, true, pkg.name()) {
             Ok(v) => v,
             Err(pkg) => {
                 err_pkgs.push(pkg);

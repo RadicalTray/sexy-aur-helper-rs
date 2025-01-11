@@ -1,4 +1,5 @@
-use std::process::{Command, ExitStatus, Output};
+use std::path::PathBuf;
+use std::process::{Command, ExitStatus, Output, Stdio};
 
 pub struct Makepkg {
     pub nobuild: bool,
@@ -7,6 +8,7 @@ pub struct Makepkg {
     pub packagelist: bool,
     pub cleanbuild: bool,
     pub clean: bool,
+    pub cwd: PathBuf,
 }
 
 impl Default for Makepkg {
@@ -18,6 +20,7 @@ impl Default for Makepkg {
             packagelist: false,
             cleanbuild: false,
             clean: false,
+            cwd: PathBuf::new(),
         }
     }
 }
@@ -29,9 +32,27 @@ impl Makepkg {
         }
     }
 
+    pub fn cwd(cwd: PathBuf) -> Self {
+        Makepkg {
+            cwd,
+            ..Default::default()
+        }
+    }
+
     pub fn status(&self) -> ExitStatus {
         Command::new("makepkg")
             .args(self.get_args())
+            .current_dir(&self.cwd)
+            .status()
+            .expect("can't run makepkg")
+    }
+
+    pub fn status_mute(&self) -> ExitStatus {
+        Command::new("makepkg")
+            .args(self.get_args())
+            .current_dir(&self.cwd)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
             .status()
             .expect("can't run makepkg")
     }
@@ -39,6 +60,7 @@ impl Makepkg {
     pub fn output(&self) -> Output {
         Command::new("makepkg")
             .args(self.get_args())
+            .current_dir(&self.cwd)
             .output()
             .expect("can't run makepkg")
     }
