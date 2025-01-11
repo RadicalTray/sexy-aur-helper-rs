@@ -95,7 +95,13 @@ pub fn upgrade(g: &Globals) {
             }
         };
 
-        Pacman::new().U_all_status(built_pkg_paths).code().unwrap();
+        Pacman {
+            yes: true,
+            ..Default::default()
+        }
+        .U_all_status(built_pkg_paths)
+        .code()
+        .unwrap();
     }
 
     if err_pkgs.len() > 0 {

@@ -43,7 +43,11 @@ impl Pacman {
             .arg("-S")
             .args(self.get_args())
             .arg(pkg)
-            .stdin(Stdio::piped())
+            .stdin(if self.yes {
+                Stdio::piped()
+            } else {
+                Stdio::inherit()
+            })
             .spawn()
             .expect("can't run pacman");
 
@@ -57,7 +61,11 @@ impl Pacman {
             .arg("-S")
             .args(self.get_args())
             .args(pkgs)
-            .stdin(Stdio::piped())
+            .stdin(if self.yes {
+                Stdio::piped()
+            } else {
+                Stdio::inherit()
+            })
             .spawn()
             .expect("can't run pacman");
 
@@ -71,7 +79,11 @@ impl Pacman {
             .arg("-U")
             .args(self.get_args())
             .arg(pkg)
-            .stdin(Stdio::piped())
+            .stdin(if self.yes {
+                Stdio::piped()
+            } else {
+                Stdio::inherit()
+            })
             .spawn()
             .expect("can't run pacman");
 
@@ -84,7 +96,11 @@ impl Pacman {
             .arg("-U")
             .args(self.get_args())
             .args(pkgs)
-            .stdin(Stdio::piped())
+            .stdin(if self.yes {
+                Stdio::piped()
+            } else {
+                Stdio::inherit()
+            })
             .spawn()
             .expect("can't run pacman");
 
