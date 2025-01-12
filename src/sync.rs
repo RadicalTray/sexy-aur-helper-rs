@@ -1,6 +1,10 @@
+use crate::build::*;
+use crate::fetch::*;
 use crate::fetch::{get_pkgbases, is_in_pkgbases};
 use crate::globals::Globals;
-use crate::pkg::sync;
+use crate::pacman::Pacman;
+use crate::utils::*;
+use std::process;
 
 pub const STR: &str = "sync";
 
@@ -23,4 +27,52 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
     sync(&g, pkgs, true);
 
     Ok(())
+}
+
+struct SyncConfig {
+    needed: bool,
+    asdeps: bool,
+    asexplicit: bool,
+    force: bool,
+}
+
+fn parse_config() {}
+
+fn sync(g: &Globals, pkgs: Vec<String>, quit_on_err: bool) {
+    prepare_clone(g);
+
+    let clone_path = g.cache_path.clone().join("clone");
+    let (mut old_pkgs, new_pkgs, err_pkgs) =
+        fetch_pkgs(&clone_path, pkgs.into_iter().map(|x| (x, None)).collect());
+    old_pkgs.extend(new_pkgs);
+    let fetched_pkgs = old_pkgs.iter().map(|x| x.0.clone()).collect();
+
+    if quit_on_err && err_pkgs.len() > 0 {
+        eprintln!("Error happened while cloning:");
+        for pkg in err_pkgs {
+            eprintln!("\t{}", pkg.0);
+        }
+        return;
+    }
+
+    let (built_pkg_paths, err_pkgs) = build_all(&clone_path, fetched_pkgs);
+    if quit_on_err && err_pkgs.len() > 0 {
+        eprintln!("Error happened while building:");
+        for pkg in err_pkgs {
+            eprintln!("\t{pkg}");
+        }
+        return;
+    }
+
+    // TODO: print stats
+
+    let status_code = Pacman::new().U_all_status(built_pkg_paths).code().unwrap();
+    if err_pkgs.len() > 0 {
+        eprintln!("Error happened while building:");
+        for pkg in err_pkgs {
+            eprintln!("\t{pkg}");
+        }
+    }
+
+    process::exit(status_code);
 }

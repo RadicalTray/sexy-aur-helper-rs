@@ -9,7 +9,6 @@ mod git;
 mod globals;
 mod makepkg;
 mod pacman;
-mod pkg;
 mod search;
 mod sync;
 mod threadpool;

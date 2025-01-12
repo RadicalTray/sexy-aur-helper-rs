@@ -8,6 +8,8 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::process;
+use crate::globals::Globals;
+use std::env;
 
 pub fn print_help(to_stderr: bool) {
     let s = format!(
@@ -65,4 +67,12 @@ pub fn read_file_lines_to_strings<P: AsRef<Path>>(filepath: P) -> Vec<String> {
 
 pub fn read_lines_to_strings(s: String) -> Vec<String> {
     s.lines().map(String::from).collect()
+}
+
+pub fn prepare_clone(g: &Globals) {
+    let clone_path = g.cache_path.clone().join("clone");
+    if !clone_path.exists() {
+        fs::create_dir(&clone_path).unwrap();
+    }
+    env::set_current_dir(clone_path).unwrap();
 }
