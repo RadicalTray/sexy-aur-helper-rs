@@ -1,15 +1,15 @@
 use crate::clear;
+use crate::globals::Globals;
 use crate::search;
 use crate::sync;
 use crate::update;
 use crate::upgrade;
+use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::process;
-use crate::globals::Globals;
-use std::env;
 
 pub fn print_help(to_stderr: bool) {
     let s = format!(

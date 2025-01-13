@@ -3,7 +3,11 @@ use std::fs;
 
 pub const STR: &str = "clear-cache";
 
-pub fn run(g: Globals, _args: Vec<String>) -> Result<(), String> {
+pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
+    if args.len() != 0 {
+        return Err("unexpected arguments".to_string());
+    }
+
     println!("Clearing built packages...");
     let clone_path = g.cache_path.join("clone");
     if clone_path.exists() {

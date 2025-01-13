@@ -1,3 +1,4 @@
+use crate::build::PkgInfo;
 use crate::git::Git;
 use crate::globals::*;
 use crate::threadpool::ThreadPool;
@@ -10,8 +11,8 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 // (PackageName, Option<Version>)
-pub type PV = (String, Option<Version>);
-pub type VPV = Vec<(String, Option<Version>)>;
+pub type PV = (PkgInfo, Option<Version>);
+pub type VPV = Vec<(PkgInfo, Option<Version>)>;
 
 pub fn fetch_pkgs(clone_path: &PathBuf, pkgs: VPV) -> (VPV, VPV, VPV) {
     println!("Fetching AUR.");
@@ -44,7 +45,7 @@ pub fn fetch_pkgs(clone_path: &PathBuf, pkgs: VPV) -> (VPV, VPV, VPV) {
     if new_pkgs_n_outputs.len() > 0 {
         println!("AUR Repo diffs:");
         for ((pkg, _), output) in &new_pkgs_n_outputs {
-            println!("{pkg}:");
+            println!("{}:", pkg.name);
             println!("{output}");
             println!();
         }
@@ -57,7 +58,7 @@ pub fn fetch_pkgs(clone_path: &PathBuf, pkgs: VPV) -> (VPV, VPV, VPV) {
     if err_pkgs.len() > 0 {
         println!("Error occured while fetching/cloning!");
         for (pkg, _) in &err_pkgs {
-            println!("{pkg}: Error happend while fetching/cloning!");
+            println!("{}: Error happend while fetching/cloning!", pkg.name);
         }
     }
 
@@ -71,35 +72,36 @@ pub fn fetch_pkgs(clone_path: &PathBuf, pkgs: VPV) -> (VPV, VPV, VPV) {
 
 fn fetch_pkg(
     clone_path: &PathBuf,
-    pkg: PV,
+    pv: PV,
     old_pkgs: Arc<Mutex<VPV>>,
     new_pkgs_n_outputs: Arc<Mutex<Vec<(PV, String)>>>,
     err_pkgs: Arc<Mutex<VPV>>,
 ) {
-    let pkg_dir = clone_path.clone().join(&pkg.0);
+    let (ref pkg, _) = pv;
+    let pkg_dir = clone_path.clone().join(&pkg.name);
     if pkg_dir.exists() {
         let git = Git::cwd(pkg_dir);
         let status = git.fetch();
 
         if !status.success() {
-            err_pkgs.lock().unwrap().push(pkg);
+            err_pkgs.lock().unwrap().push(pv);
         } else {
             let diff_output = String::from_utf8(git.diff_fetch_color().stdout).expect("UTF-8");
             if !diff_output.trim().is_empty() {
-                new_pkgs_n_outputs.lock().unwrap().push((pkg, diff_output));
+                new_pkgs_n_outputs.lock().unwrap().push((pv, diff_output));
             } else {
-                old_pkgs.lock().unwrap().push(pkg);
+                old_pkgs.lock().unwrap().push(pv);
             }
         }
     } else {
         let status =
-            Git::cwd(clone_path.to_path_buf()).clone(format!("{URL_AUR}/{}.git", pkg.0).as_str());
+            Git::cwd(clone_path.to_path_buf()).clone(format!("{URL_AUR}/{}.git", pkg.name).as_str());
 
         if !status.success() {
-            err_pkgs.lock().unwrap().push(pkg);
+            err_pkgs.lock().unwrap().push(pv);
         } else {
             let output = read_dir_files(&pkg_dir);
-            new_pkgs_n_outputs.lock().unwrap().push((pkg, output));
+            new_pkgs_n_outputs.lock().unwrap().push((pv, output));
         }
     };
 }
@@ -142,8 +144,13 @@ pub fn get_pkgs(g: &Globals) -> Result<Vec<String>, String> {
     Ok(read_file_lines_to_strings(pkg_path))
 }
 
-pub fn is_in_pkgbases(pkgbases: &Vec<String>, mut pkgs: Vec<String>) -> (Vec<String>, Vec<String>) {
-    let err_pkgs = pkgs.extract_if(.., |pkg| !pkgbases.contains(pkg)).collect();
+pub fn is_in_pkgbases(
+    pkgbases: &Vec<String>,
+    mut pkgs: Vec<PkgInfo>,
+) -> (Vec<PkgInfo>, Vec<PkgInfo>) {
+    let err_pkgs = pkgs
+        .extract_if(.., |pkg_info| !pkgbases.contains(&pkg_info.name))
+        .collect();
     (pkgs, err_pkgs)
 }
 

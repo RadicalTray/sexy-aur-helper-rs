@@ -2,6 +2,24 @@ use std::io;
 use std::io::Write;
 use std::process::{Child, Command, ExitStatus, Stdio};
 
+pub struct InstallInfo {
+    pub pkg_paths: Vec<String>,
+    pub needed: bool,
+    pub asdeps: bool,
+    pub asexplicit: bool,
+}
+
+impl InstallInfo {
+    pub fn new(pkg_paths: Vec<String>) -> Self {
+        InstallInfo {
+            pkg_paths,
+            needed: false,
+            asdeps: false,
+            asexplicit: false,
+        }
+    }
+}
+
 pub struct Pacman {
     pub yes: bool,
     pub asexplicit: bool,

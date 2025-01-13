@@ -1,15 +1,15 @@
 # TODO
 ## Doing
-    - impl (clear cache):
-        - rm *.pkg.tar.zst
-
-## Backlog
     - (sync): add support for flags
         - needed
         - asdeps
         - asexplicit
+        - force
 
-## Interesting feature
+## Backlog
+
+## Interesting
+    - could've used ref count ptr on some clone_path variables
     - (config): use PKGBUILD in .config/saur
         - detect and notify if upstream is updated and local PKGBUILD is not
         - could try git cloning aur repo into .config/saur/clone/<AUR REPO> and

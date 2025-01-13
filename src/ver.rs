@@ -47,11 +47,11 @@ fn get_pkg_to_upgrade(
         (_, None) => panic!("what the fuck are you doing?"),
     };
 
-    let cwd = clone_path.clone().join(&pkg);
+    let cwd = clone_path.clone().join(&pkg.name);
 
     let status = Git::cwd(cwd.clone()).reset_hard_origin_mute();
     if !status.success() {
-        err_pkgs.lock().unwrap().push(pkg);
+        err_pkgs.lock().unwrap().push(pkg.name);
         return;
     }
 
@@ -62,7 +62,7 @@ fn get_pkg_to_upgrade(
     };
     let status = makepkg.status_mute();
     if !status.success() {
-        err_pkgs.lock().unwrap().push(pkg);
+        err_pkgs.lock().unwrap().push(pkg.name);
         return;
     }
 
@@ -75,7 +75,7 @@ get_full_version
 ",
     );
     if !output.status.success() {
-        err_pkgs.lock().unwrap().push(pkg);
+        err_pkgs.lock().unwrap().push(pkg.name);
         return;
     }
 
@@ -83,6 +83,6 @@ get_full_version
     let new_ver = new_ver.trim();
 
     if alpm::vercmp(old_ver.as_str(), new_ver) == Less {
-        pkgs_to_upgrade.lock().unwrap().insert(pkg);
+        pkgs_to_upgrade.lock().unwrap().insert(pkg.name);
     }
 }
