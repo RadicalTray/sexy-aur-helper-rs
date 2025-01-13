@@ -94,8 +94,8 @@ fn fetch_pkg(
             }
         }
     } else {
-        let status =
-            Git::cwd(clone_path.to_path_buf()).clone(format!("{URL_AUR}/{}.git", pkg.name).as_str());
+        let status = Git::cwd(clone_path.to_path_buf())
+            .clone(format!("{URL_AUR}/{}.git", pkg.name).as_str());
 
         if !status.success() {
             err_pkgs.lock().unwrap().push(pv);

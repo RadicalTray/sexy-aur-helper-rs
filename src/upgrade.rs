@@ -87,7 +87,7 @@ fn upgrade(g: &Globals) {
         set.insert(pkg.name());
 
         let cwd = clone_path.clone().join(pkg.name());
-        let built_pkg_paths = match build(cwd, true, pkg.name()) {
+        let install_infos = match build(cwd, true, PkgInfo::new(pkg.name().to_string())) {
             Ok(v) => v,
             Err(pkg) => {
                 err_pkgs.push(pkg);
@@ -95,13 +95,15 @@ fn upgrade(g: &Globals) {
             }
         };
 
-        if !(Pacman {
-            yes: true,
-            ..Default::default()
-        })
-        .U_all_status(built_pkg_paths)
-        .success()
-        {
+        let mut success = true;
+        for install_info in install_infos {
+            let s = Pacman { yes: true }.U_all_status(install_info).success();
+            if !s {
+                success = false;
+            }
+        }
+
+        if !success {
             err_pkgs.push(pkg.name().to_string());
             break;
         }

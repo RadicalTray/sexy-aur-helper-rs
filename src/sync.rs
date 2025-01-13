@@ -136,8 +136,17 @@ fn sync(g: &Globals, pkgs: Vec<PkgInfo>) {
 
     old_pkgs.extend(new_pkgs);
     let fetched_pkgs = old_pkgs.iter().map(|x| x.0.clone()).collect();
-    let (built_pkg_paths, err_pkgs) = build_all(&clone_path, fetched_pkgs);
-    let status_code = Pacman::new().U_all_status(built_pkg_paths).code().unwrap();
+    let (install_infos, err_pkgs) = build_all(&clone_path, fetched_pkgs);
+    let mut status_code = 0;
+    for install_info in install_infos {
+        let c = Pacman { yes: true }
+            .U_all_status(install_info)
+            .code()
+            .unwrap();
+        if c != 0 {
+            status_code = c;
+        }
+    }
 
     if err_pkgs.len() > 0 {
         eprintln!("Error happened while building:");

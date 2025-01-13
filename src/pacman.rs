@@ -9,43 +9,12 @@ pub struct InstallInfo {
     pub asexplicit: bool,
 }
 
-impl InstallInfo {
-    pub fn new(pkg_paths: Vec<String>) -> Self {
-        InstallInfo {
-            pkg_paths,
-            needed: false,
-            asdeps: false,
-            asexplicit: false,
-        }
-    }
-}
-
 pub struct Pacman {
     pub yes: bool,
-    pub asexplicit: bool,
-    pub asdeps: bool,
-    pub needed: bool,
-}
-
-impl Default for Pacman {
-    fn default() -> Self {
-        Pacman {
-            yes: false,
-            asexplicit: false,
-            asdeps: false,
-            needed: false,
-        }
-    }
 }
 
 #[allow(non_snake_case)]
 impl Pacman {
-    pub fn new() -> Self {
-        Pacman {
-            ..Default::default()
-        }
-    }
-
     pub fn Syu_status() -> ExitStatus {
         Command::new("sudo")
             .arg("pacman")
@@ -54,66 +23,12 @@ impl Pacman {
             .expect("can't run pacman")
     }
 
-    #[allow(dead_code)]
-    pub fn S_status(&self, pkg: &str) -> ExitStatus {
-        let proc = Command::new("sudo")
-            .arg("pacman")
-            .arg("-S")
-            .args(self.get_args())
-            .arg(pkg)
-            .stdin(if self.yes {
-                Stdio::piped()
-            } else {
-                Stdio::inherit()
-            })
-            .spawn()
-            .expect("can't run pacman");
-
-        self.enter_and_wait(proc)
-    }
-
-    #[allow(dead_code)]
-    pub fn S_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
-        let proc = Command::new("sudo")
-            .arg("pacman")
-            .arg("-S")
-            .args(self.get_args())
-            .args(pkgs)
-            .stdin(if self.yes {
-                Stdio::piped()
-            } else {
-                Stdio::inherit()
-            })
-            .spawn()
-            .expect("can't run pacman");
-
-        self.enter_and_wait(proc)
-    }
-
-    #[allow(dead_code)]
-    pub fn U_status(&self, pkg: &str) -> ExitStatus {
+    pub fn U_all_status(&self, install_info: InstallInfo) -> ExitStatus {
         let proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
-            .args(self.get_args())
-            .arg(pkg)
-            .stdin(if self.yes {
-                Stdio::piped()
-            } else {
-                Stdio::inherit()
-            })
-            .spawn()
-            .expect("can't run pacman");
-
-        self.enter_and_wait(proc)
-    }
-
-    pub fn U_all_status(&self, pkgs: Vec<String>) -> ExitStatus {
-        let proc = Command::new("sudo")
-            .arg("pacman")
-            .arg("-U")
-            .args(self.get_args())
-            .args(pkgs)
+            .args(Self::get_args(&install_info))
+            .args(install_info.pkg_paths)
             .stdin(if self.yes {
                 Stdio::piped()
             } else {
@@ -128,9 +43,9 @@ impl Pacman {
     // NOTE: Is there a way to write this better in rust?
     //
     // PERF: this practically makes 2 vec if compiler doesn't see it
-    fn get_args(&self) -> Vec<String> {
+    fn get_args(install_info: &InstallInfo) -> Vec<String> {
         let mut args = Vec::new();
-        let flags = self;
+        let flags = install_info;
         if flags.asdeps {
             args.push("--asdeps");
         }
