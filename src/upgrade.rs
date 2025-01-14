@@ -55,7 +55,7 @@ fn upgrade(g: &Globals) {
     let (pkgs_to_build, err_pkgs) = get_pkgs_to_upgrade(&clone_path, fetched_pkgs);
     if err_pkgs.len() > 0 {
         for pkg in err_pkgs {
-            eprintln!("{pkg}: error while filtering packages to upgrade!");
+            eprintln!("{pkg}: error while fetching package source!");
         }
         eprintln!();
     }

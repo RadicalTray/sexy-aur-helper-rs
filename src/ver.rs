@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 pub fn get_pkgs_to_upgrade(clone_path: &PathBuf, pkgs: VPV) -> (HashSet<String>, Vec<String>) {
-    println!("Filtering packages to upgrade.");
+    println!("Fetching package sources.");
     let clone_path = Arc::new(clone_path.clone());
     env::set_current_dir(&*clone_path).unwrap();
 
