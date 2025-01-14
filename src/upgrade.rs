@@ -100,6 +100,7 @@ fn upgrade(g: &Globals) {
             let s = Pacman { yes: true }.U_all_status(install_info).success();
             if !s {
                 success = false;
+                break;
             }
         }
 
