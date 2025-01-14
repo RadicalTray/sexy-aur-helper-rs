@@ -18,7 +18,7 @@ mod utils;
 mod ver;
 
 use std::process;
-use utils::print_error_w_help;
+use utils::{print_error_w_help, print_help};
 
 pub fn run(mut args: impl Iterator<Item = String>) {
     args.next();
@@ -42,6 +42,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
     let args: Vec<String> = args.collect();
 
     if let Err(e) = match cmd.as_str() {
+        "help" => Ok(print_help(false)),
         search::STR => search::run(globals, args),
         sync::STR => sync::run(globals, args),
         upgrade::STR => upgrade::run(globals, args),

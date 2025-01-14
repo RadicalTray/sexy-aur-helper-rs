@@ -12,35 +12,50 @@ use std::path::Path;
 use std::process;
 
 pub fn print_help(to_stderr: bool) {
+    let help = "help";
+    let search = search::STR;
+    let sync = sync::STR;
+    let upgrade = upgrade::STR;
+    let update = update::STR;
+    let clear = clear::STR;
+
     let s = format!(
         "\
 Usage: saur <command> <arguments> ...
 
+Show this help message:
+\tsaur {help}
+
 Search the AUR package list:
-\tsaur {} <search string>
+\tsaur {search} <search string>
 
 Sync a package or multiple packages:
-\tsaur {} <package name> [package name] ...
+\tsaur {sync} <package name> [package name] ...
 
-Sync aur package a, b as dependencies and sync package c normally sequentially
-\tsaur {} --asdeps a b --no-asdeps c
+Sync aur package a, b as dependencies and sync package c normally sequentially:
+\tsaur {sync} --asdeps a b --no-asdeps c
 
 Upgrade system and AUR packages:
-\tsaur {}
+\tsaur {upgrade}
 
 Update the AUR package list:
-\tsaur {}
+\tsaur {update}
 
 Clear built packages:
-\tsaur {}
-",
-        search::STR,
-        sync::STR,
-        sync::STR,
-        upgrade::STR,
-        update::STR,
-        clear::STR,
-    );
+\tsaur {clear}
+
+Available commands: {help} {search} {sync} {upgrade} {update} {clear}
+
+Available `{sync}` flags:
+\t--needed
+\t--asdeps
+\t--asexplicit
+\t--force|-f
+\t--no-needed
+\t--no-asdeps
+\t--no-asexplicit
+\t--no-force
+");
 
     if to_stderr {
         eprint!("{}", s);
