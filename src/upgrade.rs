@@ -52,7 +52,7 @@ fn upgrade(g: &Globals) {
     old_pkgs.extend(new_pkgs);
     let fetched_pkgs = old_pkgs;
 
-    let (pkgs_to_build, err_pkgs) = get_pkgs_to_upgrade(&clone_path, fetched_pkgs);
+    let (pkgs_to_upgrade, err_pkgs) = get_pkgs_to_upgrade(&clone_path, fetched_pkgs);
     if err_pkgs.len() > 0 {
         for pkg in err_pkgs {
             eprintln!("{pkg}: error while fetching package source!");
@@ -60,23 +60,23 @@ fn upgrade(g: &Globals) {
         eprintln!();
     }
 
-    let pkgs_to_build: Vec<_> = aur_pkgs
+    let pkgs_to_upgrade: Vec<_> = aur_pkgs
         .iter()
-        .filter(|x| pkgs_to_build.contains(x.name()))
+        .filter(|x| pkgs_to_upgrade.contains(x.name()))
         .collect();
 
-    if pkgs_to_build.len() == 0 {
-        println!("Nothing to build.");
+    if pkgs_to_upgrade.len() == 0 {
+        println!("Nothing to upgrade.");
         return;
     }
 
-    println!("{} packages to be built:", pkgs_to_build.len());
-    for pkg in &pkgs_to_build {
+    println!("{} packages to be built:", pkgs_to_upgrade.len());
+    for pkg in &pkgs_to_upgrade {
         println!("\t{}", pkg.name());
     }
     prompt_accept();
 
-    let build_stack = setup_build_stack(&pkgs_to_build);
+    let build_stack = setup_build_stack(&pkgs_to_upgrade);
     let mut set: HashSet<&str> = HashSet::new();
 
     let mut err_pkgs: Vec<String> = Vec::new();
@@ -116,13 +116,13 @@ fn upgrade(g: &Globals) {
         }
     }
 
-    if set.len() != pkgs_to_build.len() {
+    if set.len() != pkgs_to_upgrade.len() {
         println!("pkg not in build stack:");
-        for pkg in pkgs_to_build {
+        for pkg in pkgs_to_upgrade {
             if !set.contains(pkg.name()) {
                 println!("\t{}", pkg.name());
             }
-            // set containing pkgs not in pkgs_to_build should be impossible
+            // set containing pkgs not in pkgs_to_upgrade should be impossible
         }
         process::exit(1);
     }

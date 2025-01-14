@@ -14,11 +14,16 @@ use std::process;
 pub fn print_help(to_stderr: bool) {
     let s = format!(
         "\
+Usage: saur <command> <arguments> ...
+
 Search the AUR package list:
 \tsaur {} <search string>
 
 Sync a package or multiple packages:
 \tsaur {} <package name> [package name] ...
+
+Sync aur package a, b as dependencies and sync package c normally sequentially
+\tsaur {} --asdeps a b --no-asdeps c
 
 Upgrade system and AUR packages:
 \tsaur {}
@@ -30,6 +35,7 @@ Clear built packages:
 \tsaur {}
 ",
         search::STR,
+        sync::STR,
         sync::STR,
         upgrade::STR,
         update::STR,
