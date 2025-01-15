@@ -22,18 +22,19 @@ pub fn print_help(to_stderr: bool) {
     let s = format!(
         "\
 Usage: saur <command> <arguments> ...
-
-Show this help message:
-\tsaur {help}
+Available commands: {help} {search} {sync} {upgrade} {update} {clear}
 
 Search the AUR package list:
 \tsaur {search} <search string>
 
 Sync a package or multiple packages:
-\tsaur {sync} <package name> [package name] ...
+\tsaur {sync} <package names> [sync flags] ...
 
-Sync aur package a, b as dependencies and sync package c normally sequentially:
-\tsaur {sync} --asdeps a b --no-asdeps c
+Available `{sync}` flags:
+\t--needed
+\t--asdeps
+\t--asexplicit
+\t--force|-f
 
 Upgrade system and AUR packages:
 \tsaur {upgrade}
@@ -44,18 +45,10 @@ Update the AUR package list:
 Clear built packages:
 \tsaur {clear}
 
-Available commands: {help} {search} {sync} {upgrade} {update} {clear}
-
-Available `{sync}` flags:
-\t--needed
-\t--asdeps
-\t--asexplicit
-\t--force|-f
-\t--no-needed
-\t--no-asdeps
-\t--no-asexplicit
-\t--no-force
-");
+Show this help message:
+\tsaur {help}
+"
+    );
 
     if to_stderr {
         eprint!("{}", s);

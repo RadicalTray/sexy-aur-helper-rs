@@ -54,42 +54,32 @@ impl State {
 
 fn parse_args(args: Vec<String>) -> Result<Vec<PkgInfo>, String> {
     let mut state = State::new();
-    let mut pkg_infos = Vec::with_capacity(args.len());
     let mut err_flags = Vec::new();
+    let mut pkgs = Vec::with_capacity(args.len());
     for arg in args {
         match arg.as_str() {
             "--needed" => {
                 state.needed = true;
                 continue;
             }
-            "--no-needed" => {
-                state.needed = false;
-                continue;
-            }
             "--asdeps" => {
-                state.asexplicit = false;
+                if state.asexplicit {
+                    return Err("`--asdeps` cannot be used with `--asexplicit`".to_string());
+                }
+
                 state.asdeps = true;
                 continue;
             }
-            "--no-asdeps" => {
-                state.asdeps = false;
-                continue;
-            }
             "--asexplicit" => {
-                state.asdeps = false;
+                if state.asdeps {
+                    return Err("`--asexplicit` cannot be used with `--asdeps`".to_string());
+                }
+
                 state.asexplicit = true;
-                continue;
-            }
-            "--no-asexplicit" => {
-                state.asexplicit = false;
                 continue;
             }
             "-f" | "--force" => {
                 state.force = true;
-                continue;
-            }
-            "--no-force" => {
-                state.force = false;
                 continue;
             }
             _ => {
@@ -98,13 +88,7 @@ fn parse_args(args: Vec<String>) -> Result<Vec<PkgInfo>, String> {
                 } else if arg.chars().nth(0) == Some('-') {
                     err_flags.push(arg[1..].to_string());
                 } else {
-                    pkg_infos.push(PkgInfo {
-                        name: arg,
-                        needed: state.needed,
-                        asdeps: state.asdeps,
-                        asexplicit: state.asexplicit,
-                        force: state.force,
-                    });
+                    pkgs.push(arg);
                 }
             }
         }
@@ -116,6 +100,14 @@ fn parse_args(args: Vec<String>) -> Result<Vec<PkgInfo>, String> {
         }
         return Err(s);
     }
+
+    let pkg_infos = pkgs.into_iter().map(|x| PkgInfo {
+        name: x,
+        needed: state.needed,
+        asdeps: state.asdeps,
+        asexplicit: state.asexplicit,
+        force: state.force,
+    }).collect();
 
     Ok(pkg_infos)
 }
