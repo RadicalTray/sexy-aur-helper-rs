@@ -1,12 +1,8 @@
 # TODO
 ## Doing
-    - (sync): add support for flags
-        - needed
-        - asdeps
-        - asexplicit
-        - force
 
 ## Backlog
+    - check install conflicts
 
 ## Interesting
     - could've used ref count ptr on some clone_path variables

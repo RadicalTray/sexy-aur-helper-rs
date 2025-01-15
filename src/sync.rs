@@ -128,22 +128,33 @@ fn sync(g: &Globals, pkgs: Vec<PkgInfo>) {
 
     old_pkgs.extend(new_pkgs);
     let fetched_pkgs = old_pkgs.iter().map(|x| x.0.clone()).collect();
-    let (install_infos, err_pkgs) = build_all(&clone_path, fetched_pkgs);
+    let (install_infos, build_err_pkgs) = build_all(&clone_path, fetched_pkgs);
+
+    let mut install_err_pkgs = Vec::new();
+
     let mut status_code = 0;
     for install_info in install_infos {
         let c = Pacman { yes: true }
-            .U_all_status(install_info)
+            .U_all_status(&install_info)
             .code()
             .unwrap();
         if c != 0 {
             status_code = c;
+            install_err_pkgs.extend(install_info.pkg_paths);
+            break;
         }
     }
 
-    if err_pkgs.len() > 0 {
+    if build_err_pkgs.len() > 0 {
         eprintln!("Error happened while building:");
-        for pkg in err_pkgs {
+        for pkg in build_err_pkgs {
             eprintln!("\t{pkg}");
+        }
+    }
+    if install_err_pkgs.len() > 0 {
+        eprintln!("Error happened while installing:");
+        for pkg_path in install_err_pkgs {
+            eprintln!("\t{pkg_path}");
         }
     }
 

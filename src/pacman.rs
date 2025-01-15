@@ -23,12 +23,12 @@ impl Pacman {
             .expect("can't run pacman")
     }
 
-    pub fn U_all_status(&self, install_info: InstallInfo) -> ExitStatus {
+    pub fn U_all_status(&self, install_info: &InstallInfo) -> ExitStatus {
         let proc = Command::new("sudo")
             .arg("pacman")
             .arg("-U")
-            .args(Self::get_args(&install_info))
-            .args(install_info.pkg_paths)
+            .args(Self::get_args(install_info))
+            .args(&install_info.pkg_paths)
             .stdin(if self.yes {
                 Stdio::piped()
             } else {
@@ -64,7 +64,7 @@ impl Pacman {
             proc.stdin
                 .as_ref()
                 .unwrap()
-                .write("y\n".as_bytes())
+                .write("\n".as_bytes())
                 .unwrap();
 
             println!();

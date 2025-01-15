@@ -97,7 +97,7 @@ fn upgrade(g: &Globals) {
 
         let mut success = true;
         for install_info in install_infos {
-            let s = Pacman { yes: true }.U_all_status(install_info).success();
+            let s = Pacman { yes: true }.U_all_status(&install_info).success();
             if !s {
                 success = false;
                 break;
