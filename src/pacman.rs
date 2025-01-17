@@ -61,11 +61,7 @@ impl Pacman {
 
     fn enter_and_wait(&self, mut proc: Child) -> ExitStatus {
         if self.yes {
-            proc.stdin
-                .as_ref()
-                .unwrap()
-                .write("\n".as_bytes())
-                .unwrap();
+            proc.stdin.as_ref().unwrap().write("\n".as_bytes()).unwrap();
 
             println!();
             io::stdout().flush().unwrap();

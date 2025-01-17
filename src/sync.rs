@@ -101,13 +101,16 @@ fn parse_args(args: Vec<String>) -> Result<Vec<PkgInfo>, String> {
         return Err(s);
     }
 
-    let pkg_infos = pkgs.into_iter().map(|x| PkgInfo {
-        name: x,
-        needed: state.needed,
-        asdeps: state.asdeps,
-        asexplicit: state.asexplicit,
-        force: state.force,
-    }).collect();
+    let pkg_infos = pkgs
+        .into_iter()
+        .map(|x| PkgInfo {
+            name: x,
+            needed: state.needed,
+            asdeps: state.asdeps,
+            asexplicit: state.asexplicit,
+            force: state.force,
+        })
+        .collect();
 
     Ok(pkg_infos)
 }
