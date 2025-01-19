@@ -1,11 +1,20 @@
 # TODO
-## Doing
+### Doing
 
-## Backlog
+### Rework
+    - upgrade
+        - specify the upgrade order in .config/saur/upgrade.txt (txt, toml?)
+            - can add options -> ignore
+            - deny if a package is not in there or a package in there doesn't exist (deny or just err?)
+    - generate a upgrade order file (that has a not usable flag in it)
+    - if all packages in `makepkg --packagelist` exist then notify skipping build
+
+## Old Stuff
+### Backlog
     - build makedeps / checkdeps first (aurpkg.makedeps() and aurpkg.checkdeps() probably doesn't work)
     - check install conflicts
 
-## Interesting
+### Interesting
     - could've used ref count ptr on some clone_path variables
     - (config): use PKGBUILD in .config/saur
         - detect and notify if upstream is updated and local PKGBUILD is not
@@ -17,7 +26,7 @@
             - refuse to upgrade if not updated
         - OR a diff like paru does it i think?
 
-## Maybe?
+### Maybe?
     - more multithreading?
     - print stat?
     - (clear cache):
@@ -25,7 +34,7 @@
             - rm dir that is not AUR package?
             - only remove outdated packages?
 
-## Out of scope
+### Out of scope
     - [Need crate: aur_depends] automatically fetch deps
         - filter Official/AUR
             - Official

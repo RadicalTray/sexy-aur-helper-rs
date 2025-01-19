@@ -14,6 +14,7 @@ mod sync;
 mod threadpool;
 mod update;
 mod upgrade;
+mod upgrade_old;
 mod utils;
 mod ver;
 
@@ -46,6 +47,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
         search::STR => search::run(globals, args),
         sync::STR => sync::run(globals, args),
         upgrade::STR => upgrade::run(globals, args),
+        upgrade_old::STR => upgrade_old::run(globals, args),
         update::STR => update::run(globals, args),
         clear::STR => clear::run(globals, args),
         _ => Err(format!("invalid command `{cmd}`")),
