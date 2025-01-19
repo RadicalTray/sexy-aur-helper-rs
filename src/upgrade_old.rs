@@ -5,8 +5,7 @@ use crate::globals::Globals;
 use crate::pacman::Pacman;
 use crate::utils::*;
 use crate::ver::get_pkgs_to_upgrade;
-use alpm::{Alpm, Package, Version};
-use alpm_utils::depends::satisfies_nover;
+use alpm::{Alpm, Version};
 use std::collections::HashSet;
 use std::process;
 
@@ -30,7 +29,7 @@ fn upgrade(g: &Globals) {
     }
 
     let handle = Alpm::new("/", "/var/lib/pacman").unwrap();
-    let (mut aur_pkgs, err_pkgs) = get_local_aur_pkgs(&handle, &g);
+    let (mut base_pkgs, _not_base_pkgs, err_pkgs) = get_local_aur_pkgs(&handle, &g);
     for pkg in err_pkgs {
         println!("{} not found in aur!", pkg.name());
     }
@@ -39,7 +38,7 @@ fn upgrade(g: &Globals) {
     let clone_path = g.cache_path.clone().join("clone");
     let (mut old_pkgs, new_pkgs, _err_pkgs) = fetch_pkgs(
         &clone_path,
-        aur_pkgs
+        base_pkgs
             .iter()
             .map(|x| {
                 (
@@ -60,8 +59,8 @@ fn upgrade(g: &Globals) {
         eprintln!();
     }
 
-    aur_pkgs.retain(|x| pkgs_to_upgrade.contains(x.name()));
-    let pkgs_to_upgrade: Vec<_> = aur_pkgs;
+    base_pkgs.retain(|x| pkgs_to_upgrade.contains(x.name()));
+    let pkgs_to_upgrade: Vec<_> = base_pkgs;
 
     if pkgs_to_upgrade.len() == 0 {
         println!("Nothing to upgrade.");
