@@ -159,7 +159,7 @@ fn setup_build_stack<'a>(pkgs_to_build: &Vec<&'a &'a Package>) -> Vec<&'a &'a Pa
 // algorithm to build deps first
 //
 // NOTE: doesn't check for makedepends and checkdepends
-//  alpm's makedepends and checkdepends don't work
+//  alpm's makedepends and checkdepends don't work on makepkg packages
 fn push_to_build_stack<'a>(
     all_pkgs: &Vec<&'a &'a Package>,
     stack: &mut Vec<&'a &'a Package>,
