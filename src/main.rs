@@ -1,7 +1,7 @@
+use nix::unistd::geteuid;
 use saur::run;
 use std::env;
 use std::process;
-use nix::unistd::geteuid;
 
 fn main() {
     if geteuid() == 0.into() {

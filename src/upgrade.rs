@@ -129,31 +129,27 @@ fn upgrade(g: &Globals) {
     }
 }
 
-fn setup_build_stack<'a>(pkgs: &Vec<&'a &'a Package>) -> Vec<&'a &'a Package> {
-    let mut build_stack: Vec<_> = Vec::with_capacity(pkgs.len());
+fn setup_build_stack<'a>(pkgs_to_build: &Vec<&'a &'a Package>) -> Vec<&'a &'a Package> {
+    let mut build_stack: Vec<_> = Vec::with_capacity(pkgs_to_build.len());
 
     // BUG: will not include a package that depends on each other
     // in reverse so the build stack has first packages last
-    for pkg in pkgs.iter().rev() {
-        let is_aur_pkg_dep = {
-            let mut tmp = false;
-            for pkg_name in pkg.required_by() {
-                if pkgs
-                    .iter()
-                    .map(|x| x.name())
-                    .collect::<Vec<&str>>()
-                    .contains(&pkg_name.as_str())
-                {
-                    tmp = true;
-                    break;
-                }
+    for pkg in pkgs_to_build.iter().rev() {
+        let mut is_dep = false;
+        for pkg_name in pkg.required_by() {
+            if pkgs_to_build
+                .iter()
+                .map(|x| x.name())
+                .collect::<Vec<&str>>()
+                .contains(&pkg_name.as_str())
+            {
+                is_dep = true;
+                break;
             }
+        }
 
-            tmp
-        };
-
-        if !is_aur_pkg_dep {
-            push_to_build_stack(&pkgs, &mut build_stack, pkg);
+        if !is_dep {
+            push_to_build_stack(&pkgs_to_build, &mut build_stack, pkg);
         }
     }
 
@@ -161,15 +157,16 @@ fn setup_build_stack<'a>(pkgs: &Vec<&'a &'a Package>) -> Vec<&'a &'a Package> {
 }
 
 // algorithm to build deps first
+//
+// NOTE: doesn't check for makedepends and checkdepends
+//  alpm's makedepends and checkdepends don't work
 fn push_to_build_stack<'a>(
     all_pkgs: &Vec<&'a &'a Package>,
     stack: &mut Vec<&'a &'a Package>,
     pkg: &'a &'a Package,
 ) {
     stack.push(pkg);
-    let mut deps = pkg.depends().to_list_mut();
-    deps.extend(pkg.makedepends().iter());
-    deps.extend(pkg.checkdepends().iter()); // NOTE: likely not needed
+    let deps = pkg.depends();
     for dep in deps {
         for pkg in all_pkgs {
             if satisfies_nover(dep, pkg.name(), pkg.provides().into_iter()) {
