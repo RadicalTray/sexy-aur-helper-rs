@@ -2,6 +2,7 @@
 ## Doing
 
 ## Backlog
+    - build makedeps / checkdeps first (aurpkg.makedeps() and aurpkg.checkdeps() probably doesn't work)
     - check install conflicts
 
 ## Interesting
