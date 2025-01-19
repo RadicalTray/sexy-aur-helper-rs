@@ -2,6 +2,8 @@ use crate::git::Git;
 use crate::makepkg::Makepkg;
 use crate::pacman::InstallInfo;
 use crate::utils::read_lines_to_strings;
+use alpm::Package;
+use alpm_utils::depends::satisfies_nover;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
@@ -49,7 +51,7 @@ pub fn build_all(clone_path: &PathBuf, pkgs: Vec<PkgInfo>) -> (Vec<InstallInfo>,
 }
 
 /// # NOTES
-/// WON'T `git reset orign --hard` the aur repo
+/// WON'T `git reset origin --hard` the aur repo
 pub fn build(cwd: PathBuf, noextract: bool, pkg: PkgInfo) -> Result<Vec<InstallInfo>, String> {
     match (Makepkg {
         cwd: cwd.clone(),
@@ -105,5 +107,53 @@ pub fn build(cwd: PathBuf, noextract: bool, pkg: PkgInfo) -> Result<Vec<InstallI
             Ok(install_infos)
         }
         _ => Err(pkg.name),
+    }
+}
+
+pub fn setup_build_stack<'a>(pkgs_to_build: &Vec<&'a Package>) -> Vec<&'a Package> {
+    let mut build_stack: Vec<_> = Vec::with_capacity(pkgs_to_build.len());
+
+    // BUG: will not include a package that depends on each other
+    // in reverse so the build stack has first packages last
+    for pkg in pkgs_to_build.iter().rev() {
+        let mut is_dep = false;
+        for pkg_name in pkg.required_by() {
+            if pkgs_to_build
+                .iter()
+                .map(|x| x.name())
+                .collect::<Vec<&str>>()
+                .contains(&pkg_name.as_str())
+            {
+                is_dep = true;
+                break;
+            }
+        }
+
+        if !is_dep {
+            push_to_build_stack(&pkgs_to_build, &mut build_stack, pkg);
+        }
+    }
+
+    build_stack
+}
+
+// algorithm to build deps first
+//
+// NOTE: doesn't check for makedepends and checkdepends
+//  alpm's makedepends and checkdepends don't work on makepkg packages
+fn push_to_build_stack<'a>(
+    all_pkgs: &Vec<&'a Package>,
+    stack: &mut Vec<&'a Package>,
+    pkg: &'a Package,
+) {
+    stack.push(pkg);
+    let deps = pkg.depends();
+    for dep in deps {
+        for pkg in all_pkgs {
+            if satisfies_nover(dep, pkg.name(), pkg.provides().into_iter()) {
+                push_to_build_stack(all_pkgs, stack, pkg);
+                break;
+            }
+        }
     }
 }

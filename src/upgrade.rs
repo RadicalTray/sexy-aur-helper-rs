@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::gen_config;
 use crate::globals::Globals;
 use std::{fs, process};
 

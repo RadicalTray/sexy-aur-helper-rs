@@ -1,7 +1,9 @@
 use crate::alpm::get_local_aur_pkgs;
+use crate::build;
 use crate::globals::Globals;
 use alpm::Alpm;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -30,26 +32,6 @@ impl Config {
         toml::from_str(&config_content).unwrap()
     }
 
-    pub fn gen_config(alpm_handle: &Alpm, g: &Globals) {
-        let (aur_pkgs, _err_pkgs) = get_local_aur_pkgs(alpm_handle, g);
-        let config = Config {
-            generated: Some(true),
-            upgrade: UpgradeConfig {
-                install: InstallConfig {
-                    packages: aur_pkgs
-                        .iter()
-                        .map(|x| toml::Value::try_from(x.name()).unwrap())
-                        .collect(),
-                },
-                ignore: InstallConfig {
-                    packages: [].to_vec(),
-                },
-            },
-        };
-        let content = toml::to_string(&config).unwrap();
-        fs::write(&g.config_path, content).unwrap();
-    }
-
     pub fn check_config(&self) -> Result<(), String> {
         if self.generated == Some(true) {
             return Err("Remove or set `generated` key to false to use this config.".to_string());
@@ -58,6 +40,36 @@ impl Config {
         self.upgrade.ignore.check_array("upgrade")?;
 
         Ok(())
+    }
+
+    pub fn gen_config(alpm_handle: &Alpm, g: &Globals) {
+        let (aur_pkgs, _err_pkgs) = get_local_aur_pkgs(alpm_handle, g);
+        let build_stack = build::setup_build_stack(&aur_pkgs);
+        let mut pkg_set = HashSet::new();
+        let pkgs = build_stack
+            .into_iter()
+            .rev()
+            .filter(|x| {
+                let name = x.name();
+                if !pkg_set.contains(name) {
+                    pkg_set.insert(name);
+                    return true;
+                }
+                false
+            })
+            .map(|x| toml::Value::try_from(x.name()).unwrap())
+            .collect();
+        let config = Config {
+            generated: Some(true),
+            upgrade: UpgradeConfig {
+                install: InstallConfig { packages: pkgs },
+                ignore: InstallConfig {
+                    packages: [].to_vec(),
+                },
+            },
+        };
+        let content = toml::to_string_pretty(&config).unwrap();
+        fs::write(&g.config_path, content).unwrap();
     }
 }
 
