@@ -1,5 +1,4 @@
-use std::io::Write;
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Command, ExitStatus};
 
 pub struct InstallInfo {
     pub pkg_paths: Vec<String>,
@@ -23,20 +22,19 @@ impl Pacman {
     }
 
     pub fn U_all_status(&self, install_info: &InstallInfo) -> ExitStatus {
-        let proc = Command::new("sudo")
+        let mut flags = Self::get_args(install_info);
+        if self.yes {
+            flags.insert(0, "--noconfirm".to_string());
+        }
+
+        Command::new("sudo")
             .arg("pacman")
             .arg("-U")
-            .args(Self::get_args(install_info))
+            .args(flags)
+            .arg("--")
             .args(&install_info.pkg_paths)
-            .stdin(if self.yes {
-                Stdio::piped()
-            } else {
-                Stdio::inherit()
-            })
-            .spawn()
-            .expect("can't run pacman");
-
-        self.enter_and_wait(proc)
+            .status()
+            .expect("can't run pacman")
     }
 
     // NOTE: Is there a way to write this better in rust?
@@ -56,13 +54,5 @@ impl Pacman {
         }
 
         args.iter().map(|x| x.to_string()).collect()
-    }
-
-    fn enter_and_wait(&self, mut proc: Child) -> ExitStatus {
-        if self.yes {
-            proc.stdin.as_ref().unwrap().write("\n".as_bytes()).unwrap();
-        }
-
-        proc.wait().unwrap()
     }
 }

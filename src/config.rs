@@ -26,6 +26,10 @@ pub struct InstallConfig {
     packages: toml::value::Array,
 }
 
+pub struct IgnoreConfig {
+    packages: Vec<String>,
+}
+
 impl Config {
     pub fn new<P: AsRef<Path>>(file_path: P) -> Self {
         let config_content = fs::read_to_string(file_path).unwrap();
@@ -56,7 +60,6 @@ impl Config {
                 _ => panic!("What the hell!?"),
             }
         };
-
 
         for pkg in local_pkgs {
             let pkg_name = pkg.name();
@@ -105,11 +108,16 @@ impl Config {
             })
             .map(|x| toml::Value::try_from(x.name()).unwrap())
             .collect();
-        let not_base_pkgs = not_base_pkgs.iter().map(|x| toml::Value::try_from(x.name()).unwrap()).collect();
+        let not_base_pkgs = not_base_pkgs
+            .iter()
+            .map(|x| toml::Value::try_from(x.name()).unwrap())
+            .collect();
         let config = Config {
             generated: Some(true),
             upgrade: UpgradeConfig {
-                install: InstallConfig { packages: base_pkgs },
+                install: InstallConfig {
+                    packages: base_pkgs,
+                },
                 ignore: InstallConfig {
                     packages: not_base_pkgs,
                 },
