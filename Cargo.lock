@@ -141,6 +141,7 @@ dependencies = [
  "alpm",
  "alpm-utils",
  "nix",
+ "serde",
  "toml",
 ]
 

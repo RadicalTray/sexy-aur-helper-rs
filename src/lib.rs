@@ -4,7 +4,9 @@ mod alpm;
 mod bash;
 mod build;
 mod clear;
+mod config;
 mod fetch;
+mod gen_config;
 mod git;
 mod globals;
 mod makepkg;
@@ -48,6 +50,7 @@ pub fn run(mut args: impl Iterator<Item = String>) {
         sync::STR => sync::run(globals, args),
         upgrade::STR => upgrade::run(globals, args),
         upgrade_old::STR => upgrade_old::run(globals, args),
+        gen_config::STR => gen_config::run(globals, args),
         update::STR => update::run(globals, args),
         clear::STR => clear::run(globals, args),
         _ => Err(format!("invalid command `{cmd}`")),

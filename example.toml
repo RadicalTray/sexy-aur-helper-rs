@@ -1,11 +1,8 @@
-[misc]
-generated = true # REMOVE THIS TO START USING THIS FILE
-
 [upgrade.install]
 packages = [
     'a',
     'b',
-    { name = 'c', idk = true, url = 'idk', etc = true }
+    { name = 'c' }
 ]
 
 [upgrade.ignore]

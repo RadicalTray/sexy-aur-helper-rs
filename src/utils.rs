@@ -11,8 +11,10 @@ use std::io::Write;
 use std::path::Path;
 use std::process;
 
+const HELP_STR: &str = "help";
+
 pub fn print_help(to_stderr: bool) {
-    let help = "help";
+    let help = HELP_STR;
     let search = search::STR;
     let sync = sync::STR;
     let upgrade = upgrade::STR;
@@ -60,7 +62,7 @@ Show this help message:
 pub fn print_error_w_help(e: &str) {
     eprintln!("Error: {e}");
     eprintln!();
-    print_help(true);
+    eprintln!("Run `saur {HELP_STR}` to show help message.");
 }
 
 pub fn prompt_accept() {

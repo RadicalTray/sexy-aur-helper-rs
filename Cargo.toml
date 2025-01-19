@@ -7,4 +7,5 @@ edition = "2024"
 alpm = "4.0.2"
 alpm-utils = "4.0.1"
 nix = { version = "0.29.0", features = ["user"] }
+serde = { version = "1.0.217", features = ["derive"] }
 toml = "0.8.19"
