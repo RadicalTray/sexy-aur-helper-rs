@@ -7,27 +7,34 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
+pub fn val_to_name(x: toml::Value) -> String {
+    match x {
+        toml::Value::String(s) => s,
+        toml::Value::Table(t) => match &t["name"] {
+            toml::Value::String(rs) => rs.to_string(),
+            _ => panic!("What the hell!?"),
+        },
+        _ => panic!("What the hell!?"),
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    generated: Option<bool>,
-    upgrade: UpgradeConfig,
+    pub generated: Option<bool>,
+    pub upgrade: UpgradeConfig,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UpgradeConfig {
-    install: InstallConfig,
-    ignore: InstallConfig,
+    pub install: InstallConfig,
+    pub ignore: InstallConfig,
 }
 
 const VALID_PACKAGE_KEYS: &[&str] = &["name"];
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InstallConfig {
-    packages: toml::value::Array,
-}
-
-pub struct IgnoreConfig {
-    packages: Vec<String>,
+    pub packages: toml::value::Array,
 }
 
 impl Config {
@@ -50,16 +57,6 @@ impl Config {
         let mut err = false;
         let install_packages = &self.upgrade.install.packages;
         let ignore_packages = &self.upgrade.ignore.packages;
-        let val_to_name = |x| -> String {
-            match x {
-                toml::Value::String(s) => s,
-                toml::Value::Table(t) => match &t["name"] {
-                    toml::Value::String(rs) => rs.to_string(),
-                    _ => panic!("What the hell!?"),
-                },
-                _ => panic!("What the hell!?"),
-            }
-        };
 
         for pkg in local_pkgs {
             let pkg_name = pkg.name();
