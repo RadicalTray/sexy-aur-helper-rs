@@ -1,13 +1,9 @@
 # TODO
 ### Doing
 
-### Rework
-    - upgrade
-        - specify the upgrade order in .config/saur/upgrade.txt (txt, toml?)
-            - can add options -> ignore
-            - deny if a package is not in there or a package in there doesn't exist (deny or just err?)
-    - generate a upgrade order file (that has a not usable flag in it)
-    - if all packages in `makepkg --packagelist` exist then notify skipping build
+### Backlog
+    [ ] if all packages in `makepkg --packagelist` exist then notify skipping build
+    [ ] check for dups in upgrade.install.packages and upgrade.ignore.packages
 
 ## Old Stuff
 ### Backlog
