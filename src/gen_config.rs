@@ -11,7 +11,7 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
     if args.len() > 0 {
         return Err("Unexpected arguments".to_string());
     }
-    if !config_path.exists() {
+    if !config_path.parent().unwrap().exists() {
         fs::create_dir(config_path.parent().unwrap()).unwrap();
     }
 
