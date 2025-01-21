@@ -2,8 +2,6 @@
 ### Doing
 
 ### Backlog
-    [ ] if all packages in `makepkg --packagelist` exist then notify skipping build
-    [ ] check for dups in upgrade.install.packages and upgrade.ignore.packages
 
 ## Old Stuff
 ### Backlog

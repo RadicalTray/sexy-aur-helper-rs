@@ -55,29 +55,55 @@ impl Config {
 
     pub fn check_pkgs(&self, local_pkgs: &Vec<&Package>) -> Result<(), ()> {
         let mut err = false;
-        let install_packages = &self.upgrade.install.packages;
-        let ignore_packages = &self.upgrade.ignore.packages;
+        let install_package_names: Vec<String> = self
+            .upgrade
+            .install
+            .packages
+            .iter()
+            .map(|x| val_to_name(x.clone()))
+            .collect();
+        let ignore_package_names: Vec<String> = self
+            .upgrade
+            .ignore
+            .packages
+            .iter()
+            .map(|x| val_to_name(x.clone()))
+            .collect();
+
+        let dup_pkg_names: Vec<_> = install_package_names
+            .iter()
+            .filter(|x| ignore_package_names.contains(x))
+            .collect();
+        if dup_pkg_names.len() > 0 {
+            err = true;
+            dup_pkg_names
+                .iter()
+                .for_each(|x| eprintln!("Package `{}` is in both install and ignore!", x));
+        }
 
         for pkg in local_pkgs {
             let pkg_name = pkg.name();
-            if !install_packages
-                .iter()
-                .any(|x| val_to_name(x.clone()) == pkg_name)
-                && !ignore_packages
-                    .iter()
-                    .any(|x| val_to_name(x.clone()) == pkg_name)
+            if !install_package_names.iter().any(|x| x == pkg_name)
+                && !ignore_package_names.iter().any(|x| x == pkg_name)
             {
-                eprintln!("Package `{}` not in config!", pkg_name);
+                eprintln!(
+                    "Package `{}` in local package database is missing from config!",
+                    pkg_name
+                );
                 err = true;
             }
         }
 
         // Does this really need to be checked?
-        let pkgs_in_config = install_packages.iter().chain(ignore_packages);
-        for pkg in pkgs_in_config {
-            let pkg_name = val_to_name(pkg.clone());
+        let pkg_names_in_config = install_package_names
+            .into_iter()
+            .chain(ignore_package_names);
+        for pkg_name in pkg_names_in_config {
             if !local_pkgs.iter().any(|x| x.name() == pkg_name) {
-                eprintln!("Package `{}` in config not in package database!", pkg_name);
+                eprintln!(
+                    "Package `{}` in config is not found in local package database!",
+                    pkg_name
+                );
                 err = true;
             }
         }

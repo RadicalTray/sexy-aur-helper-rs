@@ -25,13 +25,6 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
         return Err("unexpected arguments.".to_string());
     }
 
-    let status = Pacman::Syu_status();
-    // BUG: if CTRL+C (and maybe other signal), the sudo will later show output
-    // after process has left messing with user's prompt
-    if !status.success() {
-        process::exit(status.code().unwrap());
-    }
-
     if !config_path.exists() {
         eprintln!("Run `saur {}` to generate config", gen_config::STR);
         return Err("config file doesn't exist.".to_string());
@@ -44,6 +37,13 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
     let local_foreign_pkgs = get_local_foreign_pkgs(&handle);
     if let Err(_) = config.check_pkgs(&local_foreign_pkgs) {
         process::exit(1);
+    }
+
+    let status = Pacman::Syu_status();
+    // BUG: if CTRL+C (and maybe other signal), the sudo will later show output
+    // after process has left messing with user's prompt
+    if !status.success() {
+        process::exit(status.code().unwrap());
     }
 
     let infos = get_versions(local_foreign_pkgs, config.upgrade.install.packages);
