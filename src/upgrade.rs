@@ -69,7 +69,6 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
     }
 
     let mut infos = infos;
-    println!("All shits: {:#?}", infos);
     infos.retain(|(x, _)| pkgs_to_upgrade.contains(&x.name));
     let pkgs_to_upgrade = infos;
 
