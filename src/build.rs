@@ -84,16 +84,16 @@ pub fn build(cwd: PathBuf, noextract: bool, pkg: PkgInfo) -> Result<Vec<InstallI
                         .contains(&pkg.name)
                 });
                 install_infos.push(InstallInfo {
-                    pkg_paths: main_pkgs,
-                    needed: pkg.needed,
-                    asdeps: pkg.asdeps,
-                    asexplicit: pkg.asexplicit,
-                });
-                install_infos.push(InstallInfo {
                     pkg_paths: extra_pkgs,
                     needed: pkg.needed,
                     asdeps: true,
                     asexplicit: false,
+                });
+                install_infos.push(InstallInfo {
+                    pkg_paths: main_pkgs,
+                    needed: pkg.needed,
+                    asdeps: pkg.asdeps,
+                    asexplicit: pkg.asexplicit,
                 });
             } else {
                 install_infos.push(InstallInfo {
