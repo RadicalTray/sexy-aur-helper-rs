@@ -3,7 +3,7 @@ use crate::fetch::{PV, VPV};
 use crate::git::Git;
 use crate::makepkg::Makepkg;
 use crate::threadpool::ThreadPool;
-use std::cmp::Ordering::Less;
+use std::cmp::Ordering::{Equal, Greater, Less};
 use std::collections::HashSet;
 use std::env;
 use std::path::PathBuf;
@@ -82,7 +82,13 @@ get_full_version
     let new_ver = String::from_utf8(output.stdout).expect("pkgver not UTF-8");
     let new_ver = new_ver.trim();
 
-    if alpm::vercmp(old_ver.as_str(), new_ver) == Less {
-        pkgs_to_upgrade.lock().unwrap().insert(pkg.name);
+    match alpm::vercmp(old_ver.as_str(), new_ver) {
+        Less => {
+            pkgs_to_upgrade.lock().unwrap().insert(pkg.name);
+        }
+        Equal => (),
+        Greater => {
+            println!("`{}` has a higher version!", pkg.name);
+        }
     }
 }
