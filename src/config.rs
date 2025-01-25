@@ -87,7 +87,7 @@ impl Config {
                 && !ignore_package_names.iter().any(|x| x == pkg_name)
             {
                 eprintln!(
-                    "Package `{}` in local package database is missing from config!",
+                    "Package `{}` in local foreign package database is missing from config!",
                     pkg_name
                 );
                 err = true;
@@ -101,7 +101,7 @@ impl Config {
         for pkg_name in pkg_names_in_config {
             if !local_pkgs.iter().any(|x| x.name() == pkg_name) {
                 eprintln!(
-                    "Package `{}` in config is not found in local package database!",
+                    "Package `{}` in config is not found in local foreign package database!",
                     pkg_name
                 );
                 err = true;
