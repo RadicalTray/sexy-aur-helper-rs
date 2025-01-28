@@ -89,7 +89,7 @@ pub fn run(g: Globals, args: Vec<String>) -> Result<(), String> {
     }
     prompt_accept();
 
-    build_and_install(&clone_path, pkgs_to_upgrade);
+    build_and_install(&clone_path, true, pkgs_to_upgrade);
 
     Ok(())
 }
@@ -110,13 +110,17 @@ fn get_versions(
         .collect()
 }
 
-pub fn build_and_install(clone_path: &PathBuf, pkgs: Vec<(PkgInfo, Option<Version>)>) {
+pub fn build_and_install(
+    clone_path: &PathBuf,
+    noextract: bool,
+    pkgs: Vec<(PkgInfo, Option<Version>)>,
+) {
     let mut err_pkgs = Vec::new();
     let mut fail = false;
     for (pkg, _) in pkgs {
         let pkg_name = pkg.name;
         let cwd = clone_path.clone().join(&pkg_name);
-        let install_infos = match build(cwd, true, PkgInfo::new(pkg_name.clone())) {
+        let install_infos = match build(cwd, noextract, PkgInfo::new(pkg_name.clone())) {
             Ok(v) => v,
             Err(pkg) => {
                 err_pkgs.push(pkg);

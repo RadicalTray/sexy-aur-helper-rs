@@ -128,5 +128,5 @@ fn sync(g: &Globals, pkgs: Vec<PkgInfo>) {
         return;
     }
 
-    build_and_install(&clone_path, pkgs_w_ver);
+    build_and_install(&clone_path, false, pkgs_w_ver);
 }
