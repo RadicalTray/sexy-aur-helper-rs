@@ -2,9 +2,8 @@ use crate::build::*;
 use crate::fetch::*;
 use crate::fetch::{get_pkgbases, is_in_pkgbases};
 use crate::globals::Globals;
-use crate::pacman::Pacman;
+use crate::upgrade::build_and_install;
 use crate::utils::*;
-use std::process;
 
 pub const STR: &str = "sync";
 
@@ -118,9 +117,9 @@ fn parse_args(args: Vec<String>) -> Result<Vec<PkgInfo>, String> {
 fn sync(g: &Globals, pkgs: Vec<PkgInfo>) {
     prepare_clone(g);
 
+    let pkgs_w_ver: VPV = pkgs.into_iter().map(|x| (x, None)).collect();
     let clone_path = g.cache_path.clone().join("clone");
-    let (mut old_pkgs, new_pkgs, err_pkgs) =
-        fetch_pkgs(&clone_path, pkgs.into_iter().map(|x| (x, None)).collect());
+    let (_, _, err_pkgs) = fetch_pkgs(&clone_path, pkgs_w_ver.clone());
     if err_pkgs.len() > 0 {
         eprintln!("Error happened while cloning:");
         for pkg in err_pkgs {
@@ -129,37 +128,5 @@ fn sync(g: &Globals, pkgs: Vec<PkgInfo>) {
         return;
     }
 
-    old_pkgs.extend(new_pkgs);
-    let fetched_pkgs = old_pkgs.iter().map(|x| x.0.clone()).collect();
-    let (install_infos, build_err_pkgs) = build_all(&clone_path, fetched_pkgs);
-
-    let mut install_err_pkgs = Vec::new();
-
-    let mut status_code = 0;
-    for install_info in install_infos {
-        let c = Pacman { yes: true }
-            .U_all_status(&install_info)
-            .code()
-            .unwrap();
-        if c != 0 {
-            status_code = c;
-            install_err_pkgs.extend(install_info.pkg_paths);
-            break;
-        }
-    }
-
-    if build_err_pkgs.len() > 0 {
-        eprintln!("Error happened while building:");
-        for pkg in build_err_pkgs {
-            eprintln!("\t{pkg}");
-        }
-    }
-    if install_err_pkgs.len() > 0 {
-        eprintln!("Error happened while installing:");
-        for pkg_path in install_err_pkgs {
-            eprintln!("\t{pkg_path}");
-        }
-    }
-
-    process::exit(status_code);
+    build_and_install(&clone_path, pkgs_w_ver);
 }

@@ -110,7 +110,7 @@ fn get_versions(
         .collect()
 }
 
-fn build_and_install(clone_path: &PathBuf, pkgs: Vec<(PkgInfo, Option<Version>)>) {
+pub fn build_and_install(clone_path: &PathBuf, pkgs: Vec<(PkgInfo, Option<Version>)>) {
     let mut err_pkgs = Vec::new();
     let mut fail = false;
     for (pkg, _) in pkgs {
